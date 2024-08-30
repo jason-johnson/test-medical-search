@@ -1,4 +1,4 @@
-import requests
+from .results import Redo, Success
 
 
 class Dynamed:
@@ -10,13 +10,32 @@ class Dynamed:
             "Authorization": "Bearer TOKEN"
         }
 
-    def search(self, query, limit=10, sort='relevance', filter='all'):
+    async def search(self, session, searchkey, limit=10):
         params = {
-            'query': query,
+            'query': searchkey,
             'fields': ['title'],
         }
 
-        response = requests.post(self.base_url, json=params, headers=self.headers)
-        data = response.json()
+        async with session.get(self.base_url, json=params, headers=self.headers) as resp:
+            response = await resp.json()
+            if response.get('name', '') == 'Unauthorized':
+                return Redo(searchkey, self, limit)
+            
+            result = []
+            
+            for data in response.get('data', []):
+                result.append(Success(
+                    searchkey=searchkey,
+                    published_year=data.get('publicationDate', ''),
+                    published_date=data.get('year', ''),
+                    authors=[author.get('name', '') for author in data.get('authors', [])],
+                    keywords=[],
+                    title=data.get('title', ''),
+                    abstract=data.get('abstract', 'NA'),
+                    introduction='NA',
+                    results='NA',
+                    conclusion='NA',
+                    figures=[]
+                ))
 
-        return data
+            return result
