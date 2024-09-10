@@ -35,7 +35,8 @@ class SemanticScholar:
                     introduction='NA',
                     results='NA',
                     conclusion='NA',
-                    figures=[]
+                    figures=[],
+                    pdf_url=data.get('openAccessPdf', '')
                 ))
 
             return result
