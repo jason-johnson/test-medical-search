@@ -11,7 +11,7 @@ class SemanticScholar:
 
     async def search(self, session, searchkey, token=None):
         params = {
-            'query': searchkey,
+            'query': f'"{searchkey}"',
             'fields': 'title,abstract,publicationDate,authors,year,influentialCitationCount,openAccessPdf,citationCount,publicationTypes,fieldsOfStudy,s2FieldsOfStudy',
             'year': '2014-2024',
             'sort': 'citationCount:desc',
@@ -25,7 +25,7 @@ class SemanticScholar:
             headers['X-API-KEY'] = self.key
             logging.debug("Using API key for Semantic Scholar")
 
-        param_str = urllib.parse.urlencode(params, safe=',')
+        param_str = urllib.parse.urlencode(params, safe=',"')
 
         async with session.get(self.base_url, params=param_str, headers=headers) as resp:
             response = await resp.json()
