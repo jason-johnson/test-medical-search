@@ -12,12 +12,12 @@ import logging
 
 async def query(client, query, limit, session):
     logging.info(f'Querying {client.__class__.__name__}')
-    resp = await client.search(session, query, limit)
+    resp = await client.search(session, query, 0, limit)
     return resp
 
 async def query_redo(redo, session):
     logging.info(f'Redoing {redo}')
-    resp = await redo.client.search(session, redo.searchkey, redo.limit)
+    resp = await redo.client.search(session, redo.searchkey, redo.offset, redo.limit)
     return resp
 
 def process_results(results, success=[]):
