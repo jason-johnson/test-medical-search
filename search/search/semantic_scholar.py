@@ -1,10 +1,13 @@
+import logging
 import urllib
+import os
 
 from .results import Partial, Redo, Success
 
 class SemanticScholar:
     def __init__(self):
         self.base_url = "https://api.semanticscholar.org/graph/v1/paper/search"
+        self.key = os.environ.get('SS_API_KEY')
 
     async def search(self, session, searchkey, token={}):
         params = {
@@ -14,10 +17,15 @@ class SemanticScholar:
             'offset': token.get('offset', 0),
             'limit': token.get('limit', 100)
         }
+        headers = {}
+
+        if self.key:
+            headers['X-API-KEY'] = self.key
+            logging.debug("Using API key for Semantic Scholar")
 
         param_str = urllib.parse.urlencode(params, safe=',')
 
-        async with session.get(self.base_url, params=param_str) as resp:
+        async with session.get(self.base_url, params=param_str, headers=headers) as resp:
             response = await resp.json()
             if response.get('code', 0) == '429':
                 return Redo(searchkey, self, token)
@@ -37,7 +45,7 @@ class SemanticScholar:
                     results='NA',
                     conclusion='NA',
                     figures=[],
-                    pdf_url=data.get('openAccessPdf', '')
+                    pdf_url=(data.get('openAccessPdf', {}) or {}).get('url', ''),
                 ))
 
             if response.get('total', 0) > token.get('offset', 0) + token.get('limit', 100):
