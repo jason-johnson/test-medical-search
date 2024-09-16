@@ -10,7 +10,7 @@ class Dynamed:
             "Authorization": "Bearer TOKEN"
         }
 
-    async def search(self, session, searchkey, offset=0, limit=10):
+    async def search(self, session, searchkey, token={}):
         params = {
             'query': searchkey,
             'fields': ['title'],
@@ -19,7 +19,7 @@ class Dynamed:
         async with session.get(self.base_url, json=params, headers=self.headers) as resp:
             response = await resp.json()
             if response.get('name', '') == 'Unauthorized':
-                return Redo(searchkey, self, offset, limit)
+                return Redo(searchkey, self, token)
             
             result = []
             

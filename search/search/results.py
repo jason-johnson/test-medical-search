@@ -27,11 +27,10 @@ class Success:
         return f"Success({self.data})"
     
 class Redo:
-    def __init__(self, searchkey, client, offset, limit):
+    def __init__(self, searchkey, client, token):
         self.searchkey = searchkey
         self.client = client
-        self.offset = offset
-        self.limit = limit
+        self.token = token
 
     def __str__(self):
         return f'Redo({self.searchkey} with {self.client.__class__.__name__})'

@@ -6,13 +6,13 @@ class SemanticScholar:
     def __init__(self):
         self.base_url = "https://api.semanticscholar.org/graph/v1/paper/search"
 
-    async def search(self, session, searchkey, offset=0, limit=100):
+    async def search(self, session, searchkey, token={}):
         params = {
             'query': searchkey,
             'fields': 'title,abstract,publicationDate,authors,year,influentialCitationCount,openAccessPdf,tldr,citationCount,publicationTypes,fieldsOfStudy,s2FieldsOfStudy',
             'year': '2014-2024',
-            'offset': offset,
-            'limit': limit
+            'offset': token.get('offset', 0),
+            'limit': token.get('limit', 100)
         }
 
         param_str = urllib.parse.urlencode(params, safe=',')
@@ -20,7 +20,7 @@ class SemanticScholar:
         async with session.get(self.base_url, params=param_str) as resp:
             response = await resp.json()
             if response.get('code', 0) == '429':
-                return Redo(searchkey, self, offset, limit)
+                return Redo(searchkey, self, token)
             
             result = []
             

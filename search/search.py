@@ -10,14 +10,14 @@ import aiofiles
 import logging
 
 
-async def query(client, query, limit, session):
+async def query(client, query, session):
     logging.info(f'Querying {client.__class__.__name__}')
-    resp = await client.search(session, query, 0, limit)
+    resp = await client.search(session, query)
     return resp
 
 async def query_redo(redo, session):
     logging.info(f'Redoing {redo}')
-    resp = await redo.client.search(session, redo.searchkey, redo.offset, redo.limit)
+    resp = await redo.client.search(session, redo.searchkey, redo.token)
     return resp
 
 def process_results(results, success=[]):
@@ -32,7 +32,6 @@ async def main():
     parser = argparse.ArgumentParser(description='Script to perform medical search.')
     parser.add_argument('-f', '--query_file', type=str, help="The file containing the search query", default="query.txt")
     parser.add_argument("--concurrent", type=int, help="The number of concurrent requests to make", default=2)
-    parser.add_argument('-l', '--limit', type=int, default=100, help='Limit the number of search results (default: 100)')
     parser.add_argument('-r', '--retries', type=int, default=3, help='Number of retries to make')
     parser.add_argument('-v', '--verbose', action='count', help='Enable verbose mode', default=0)
     
@@ -42,8 +41,6 @@ async def main():
         logging.getLogger().setLevel(logging.INFO)
     elif args.verbose > 1:
         logging.getLogger().setLevel(logging.DEBUG)
-    
-    print(f'Limit: {args.limit}')
 
     search_keywords = []
     async with aiofiles.open(args.query_file, mode='r') as f:
@@ -55,7 +52,7 @@ async def main():
     timeout = aiohttp.ClientTimeout(total=None, sock_connect=10, sock_read=600)
 
     async with aiohttp.ClientSession(connector=conn, timeout=timeout) as session:
-        results = await asyncio.gather(*(query(client, searchkeyword, args.limit, session) for client in [SemanticScholar(), Dynamed()] for searchkeyword in search_keywords))
+        results = await asyncio.gather(*(query(client, searchkeyword, session) for client in [SemanticScholar(), Dynamed()] for searchkeyword in search_keywords))
         logging.info("Finalized all. Return is a list of len {} outputs.".format(len(results)))
 
         redo, success = process_results(results)
