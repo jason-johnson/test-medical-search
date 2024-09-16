@@ -6,17 +6,19 @@ from .results import Partial, Redo, Success
 
 class SemanticScholar:
     def __init__(self):
-        self.base_url = "https://api.semanticscholar.org/graph/v1/paper/search"
+        self.base_url = "https://api.semanticscholar.org/graph/v1/paper/search/bulk"
         self.key = os.environ.get('SS_API_KEY')
 
-    async def search(self, session, searchkey, token={}):
+    async def search(self, session, searchkey, token=None):
         params = {
             'query': searchkey,
-            'fields': 'title,abstract,publicationDate,authors,year,influentialCitationCount,openAccessPdf,tldr,citationCount,publicationTypes,fieldsOfStudy,s2FieldsOfStudy',
+            'fields': 'title,abstract,publicationDate,authors,year,influentialCitationCount,openAccessPdf,citationCount,publicationTypes,fieldsOfStudy,s2FieldsOfStudy',
             'year': '2014-2024',
-            'offset': token.get('offset', 0),
-            'limit': token.get('limit', 100)
+            'sort': 'citationCount:desc',
         }
+        if token:
+            params['token'] = token
+
         headers = {}
 
         if self.key:
@@ -48,9 +50,8 @@ class SemanticScholar:
                     pdf_url=(data.get('openAccessPdf', {}) or {}).get('url', ''),
                 ))
 
-            if response.get('total', 0) > token.get('offset', 0) + token.get('limit', 100):
-                token['offset'] = response.get('next', 0)
-                token['limit'] = token.get('limit', 100)
+            if response.get('token'):
+                token = response.get('token')
                 redo = Redo(searchkey, self, token)
                 result = Partial(result, redo)
 
