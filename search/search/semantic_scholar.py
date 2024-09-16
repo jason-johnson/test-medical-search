@@ -1,6 +1,7 @@
 import logging
 import urllib
 import os
+from datetime import datetime
 
 from .results import Partial, Redo, Success
 
@@ -10,10 +11,12 @@ class SemanticScholar:
         self.key = os.environ.get('SS_API_KEY')
 
     async def search(self, session, searchkey, token=None):
+        current_year = datetime.now().year
+
         params = {
             'query': f'"{searchkey}"',
             'fields': 'title,abstract,publicationDate,authors,year,influentialCitationCount,openAccessPdf,citationCount,publicationTypes,fieldsOfStudy,s2FieldsOfStudy',
-            'year': '2014-2024',
+            'year': f'{current_year-10}-{current_year}',
             'sort': 'citationCount:desc',
         }
         if token:
