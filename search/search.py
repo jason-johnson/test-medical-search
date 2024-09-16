@@ -1,4 +1,5 @@
 import argparse
+import json
 import sys
 from search.dynamed import Dynamed
 from search.semantic_scholar import SemanticScholar
@@ -22,11 +23,17 @@ async def query_redo(redo, session):
 
 def process_results(results, success=[]):
     redo = [result for result in results if result.__class__.__name__ == 'Redo']
-    successes = [result for result in results if not result.__class__.__name__ == 'Redo']
+    successes = [result for result in results if not result.__class__.__name__ in ['Redo', 'Partial']]
+    partials = [result for result in results if result.__class__.__name__ == 'Partial']
+    
+    for partial in partials:
+        successes.append(partial.successes)
+        redo.append(partial.redo)
+
     for s in successes:
         data = [d.data for d in s]
         success.extend(data)
-    return redo, success
+    return redo, success, len(successes) > 0
 
 async def main():
     parser = argparse.ArgumentParser(description='Script to perform medical search.')
@@ -55,16 +62,21 @@ async def main():
         results = await asyncio.gather(*(query(client, searchkeyword, session) for client in [SemanticScholar(), Dynamed()] for searchkeyword in search_keywords))
         logging.info("Finalized all. Return is a list of len {} outputs.".format(len(results)))
 
-        redo, success = process_results(results)
+        redo, success, _ = process_results(results)
 
         retries = args.retries
         while redo and retries > 0:
             logging.info(f"Retrying {len(redo)} results.")
             results = await asyncio.gather(*(query_redo(r, session) for r in redo))
-            redo, success = process_results(results, success)
-            retries -= 1
+            redo, success, any_succeded = process_results(results, success)
+            if not any_succeded:
+                retries -= 1
 
         logging.info(f"Success: {len(success)}, Failures: {len(redo)}")
+
+        for s in success:
+            if s['pdf_url']:
+                print(json.dumps(s))
 
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr, level=logging.WARN)

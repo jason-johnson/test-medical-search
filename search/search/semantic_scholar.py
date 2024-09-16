@@ -1,6 +1,6 @@
 import urllib
 
-from .results import Redo, Success
+from .results import Partial, Redo, Success
 
 class SemanticScholar:
     def __init__(self):
@@ -39,5 +39,11 @@ class SemanticScholar:
                     figures=[],
                     pdf_url=data.get('openAccessPdf', '')
                 ))
+
+            if response.get('total', 0) > token.get('offset', 0) + token.get('limit', 100):
+                token['offset'] = response.get('next', 0)
+                token['limit'] = token.get('limit', 100)
+                redo = Redo(searchkey, self, token)
+                result = Partial(result, redo)
 
             return result

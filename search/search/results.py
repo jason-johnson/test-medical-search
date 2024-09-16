@@ -26,6 +26,17 @@ class Success:
     def __repr__(self):
         return f"Success({self.data})"
     
+class Partial:
+    def __init__(self, successes, redo):
+        self.successes = successes
+        self.redo = redo
+
+    def __str__(self):
+        return f'Partial({self.redo.searchkey})'
+    
+    def __repr__(self):
+        return f"Partial({self.redo.searchkey}, {self.redo.token})"
+    
 class Redo:
     def __init__(self, searchkey, client, token):
         self.searchkey = searchkey
@@ -36,4 +47,4 @@ class Redo:
         return f'Redo({self.searchkey} with {self.client.__class__.__name__})'
     
     def __repr__(self):
-        return f"Redo({self.searchkey}, {self.client}, {self.limit})"
+        return f"Redo({self.searchkey}, {self.client}, {self.token})"
