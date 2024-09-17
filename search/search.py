@@ -2,6 +2,7 @@ import argparse
 import json
 import sys
 from search.dynamed import Dynamed
+from search.pubmed import PubMed
 from search.semantic_scholar import SemanticScholar
 import asyncio
 import aiohttp
@@ -59,7 +60,7 @@ async def main():
     timeout = aiohttp.ClientTimeout(total=None, sock_connect=10, sock_read=600)
 
     async with aiohttp.ClientSession(connector=conn, timeout=timeout) as session:
-        results = await asyncio.gather(*(query(client, searchkeyword, session) for client in [SemanticScholar(), Dynamed()] for searchkeyword in search_keywords))
+        results = await asyncio.gather(*(query(client, searchkeyword, session) for client in [SemanticScholar(), PubMed()] for searchkeyword in search_keywords))
         logging.info("Finalized all. Return is a list of len {} outputs.".format(len(results)))
 
         redo, success, _ = process_results(results)
