@@ -33,8 +33,8 @@ class PubMed:
             response = await resp.json()
 
             if resp.status != 200:
-                logging.error(f"Error: {response}")
-                return Redo(searchkey=searchkey, token=token)
+                logging.error(f"Error: {self.__class__.__name__}({searchkey}) - {response}")
+                return Redo(searchkey, self, token)
             else:
                 return response
             
@@ -47,16 +47,14 @@ class PubMed:
 
         param_str = urllib.parse.urlencode(params, safe=',"][~:')
 
-        first_ids = ids[:400]
-
         async with session.post(self.base_details_url, params=param_str, headers=self.headers, data={'id': ','.join(ids)}) as resp:
             if resp.status != 200:
                 logging.error(f"Error: {resp.error}")
                 return Redo(searchkey="id", token=token)
             else:
                 response = await resp.text()
-                response = xmltodict.parse(response)
-                return response
+                data = xmltodict.parse(response)
+                return data
 
     async def search(self, session, searchkey, token={}):
         search_result = await self._get_ids(session, searchkey, token)
@@ -65,22 +63,41 @@ class PubMed:
             return search_result
         
         ids = search_result.get('esearchresult', {}).get('idlist', [])
-        details_result = await self._get_details(session, ids, token)
-            
-        result = []
-            
-        for data in response.get('data', []):
-            result.append(Success(
-                searchkey=searchkey,
-                published_year=data.get('publicationDate', ''),
-                published_date=data.get('year', ''),
-                authors=[author.get('name', '') for author in data.get('authors', [])],
-                keywords=[],
-                title=data.get('title', ''),
-                abstract=data.get('abstract', 'NA'),
-                introduction='NA',
-                results='NA',
-                conclusion='NA',
-                figures=[]
-            ))
-        return result
+
+        try:
+            details_result = await self._get_details(session, ids, token)
+            result = []
+            articles = details_result.get('PubmedArticleSet', {}).get('PubmedArticle', [])
+
+            for a in articles:
+                data = a.get('MedlineCitation', {})
+                pmc_id = data.get('PMID')
+                article = data.get('Article', {})
+                published_year = data.get('Article', {}).get('Journal', {}).get('JournalIssue', {}).get('PubDate', {}).get('Year', '')
+                pub_date = data.get('Article', {}).get('Journal', {}).get('JournalIssue', {}).get('PubDate', {})
+                published_date = f'{pub_date.get("Year", "")}-{pub_date.get("Month", "")}-{pub_date.get("Day", "")}'
+                authors = [f"{author.get('ForeName', '')} {author.get('LastName', '')}" for author in article.get('AuthorList', {}).get('Author', [])]
+                keywords = [keyword.get('#text', '') for keyword in article.get('KeywordList', [])]
+                title = article.get('ArticleTitle', '')
+                abstract = article.get('Abstract', {}).get('AbstractText', '')
+
+                result.append(Success(
+                    source=self.__class__.__name__,
+                    searchkey=searchkey,
+                    published_year=published_year,
+                    published_date=published_date,
+                    authors=authors,
+                    keywords=keywords,
+                    title=title,
+                    abstract=abstract,
+                    introduction='NA',
+                    results='NA',
+                    conclusion='NA',
+                    figures=[],
+                ))
+
+                return result
+
+        except Exception as e:
+            logging.error(f"Error: {self.__class__.__name__}({searchkey}) - {e}")
+            return Redo(searchkey, self, token)
