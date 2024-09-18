@@ -2,8 +2,9 @@ import json
 
 
 class Success:
-    def __init__(self, searchkey, published_year, published_date, authors, keywords, title, abstract, introduction, results, conclusion, figures, pdf_url):
+    def __init__(self, source, searchkey, published_year, published_date, authors, keywords, title, abstract, introduction, results, conclusion, figures, pdf_url):
         self.data = {
+            "source": source,
             "searchkey": searchkey,
             "metadata": {
                 "published_year": published_year,

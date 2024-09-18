@@ -39,6 +39,7 @@ class SemanticScholar:
             
             for data in response.get('data', []):
                 result.append(Success(
+                    source=self.__class__.__name__,
                     searchkey=searchkey,
                     published_year=data.get('publicationDate', ''),
                     published_date=data.get('year', ''),
