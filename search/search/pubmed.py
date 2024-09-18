@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import urllib
@@ -72,6 +73,47 @@ class PubMed:
                 continue
                 
         return ''
+    
+    async def _process_article(self, session, searchkey, entry):
+        data = entry.get('MedlineCitation', {})
+        pmc_id = data.get('PMID', {}).get('#text', '')
+        article_ids = entry.get('PubmedData', {}).get('ArticleIdList', {}).get('ArticleId', [])
+        if article_ids.__class__.__name__ == 'dict':
+            article_ids = [article_ids]
+        pmc_ids = [pmc_id] + [id.get('#text', '') for id in article_ids if id.get('@IdType') == 'pmc']
+        article = data.get('Article', {})
+        published_year = data.get('Article', {}).get('Journal', {}).get('JournalIssue', {}).get('PubDate', {}).get('Year', '')
+        pub_date = data.get('Article', {}).get('Journal', {}).get('JournalIssue', {}).get('PubDate', {})
+        published_date = f'{pub_date.get("Year", "")}-{pub_date.get("Month", "")}-{pub_date.get("Day", "")}'
+        author_list = article.get('AuthorList', {}).get('Author', [])
+        if author_list.__class__.__name__ == 'dict':
+            author_list = [author_list]
+        authors = [f"{author.get('ForeName', '')} {author.get('LastName', '')}" for author in author_list]
+        keywords = [keyword.get('#text', '') for keyword in article.get('KeywordList', [])]
+        title = article.get('ArticleTitle', '')
+        abstract = article.get('Abstract', {}).get('AbstractText')
+        if abstract is not None:
+            if abstract.__class__.__name__ == 'list':
+                abstract = [f"{a.get('@Label', '')}\n{a.get('#text', '')}" for a in abstract]
+                abstract = ' '.join(abstract)
+
+        pdf_url = await self._get_url(session, pmc_ids),
+
+        return Success(
+                source=self.__class__.__name__,
+                searchkey=searchkey,
+                published_year=published_year,
+                published_date=published_date,
+                authors=authors,
+                keywords=keywords,
+                title=title,
+                abstract=abstract,
+                introduction='NA',
+                results='NA',
+                conclusion='NA',
+                figures=[],
+                pdf_url=pdf_url,
+            )
 
     async def search(self, session, searchkey, token={}):
         search_result = await self._get_ids(session, searchkey, token)
@@ -88,45 +130,8 @@ class PubMed:
             logging.error(f"Error: {self.__class__.__name__}({searchkey}) - {e}")
             return Redo(searchkey, self, token)
         
-        result = []
         articles = details_result.get('PubmedArticleSet', {}).get('PubmedArticle', [])
-        for a in articles:
-            data = a.get('MedlineCitation', {})
-            pmc_id = data.get('PMID', {}).get('#text', '')
-            article_ids = a.get('PubmedData', {}).get('ArticleIdList', {}).get('ArticleId', [])
-            if article_ids.__class__.__name__ == 'dict':
-                article_ids = [article_ids]
-            pmc_ids = [pmc_id] + [id.get('#text', '') for id in article_ids if id.get('@IdType') == 'pmc']
-            article = data.get('Article', {})
-            published_year = data.get('Article', {}).get('Journal', {}).get('JournalIssue', {}).get('PubDate', {}).get('Year', '')
-            pub_date = data.get('Article', {}).get('Journal', {}).get('JournalIssue', {}).get('PubDate', {})
-            published_date = f'{pub_date.get("Year", "")}-{pub_date.get("Month", "")}-{pub_date.get("Day", "")}'
-            author_list = article.get('AuthorList', {}).get('Author', [])
-            if author_list.__class__.__name__ == 'dict':
-                author_list = [author_list]
-            authors = [f"{author.get('ForeName', '')} {author.get('LastName', '')}" for author in author_list]
-            keywords = [keyword.get('#text', '') for keyword in article.get('KeywordList', [])]
-            title = article.get('ArticleTitle', '')
-            abstract = article.get('Abstract', {}).get('AbstractText')
-            if abstract is not None:
-                if abstract.__class__.__name__ == 'list':
-                    abstract = [f"{a.get('@Label', '')}\n{a.get('#text', '')}" for a in abstract]
-                    abstract = ' '.join(abstract)
 
-            result.append(Success(
-                source=self.__class__.__name__,
-                searchkey=searchkey,
-                published_year=published_year,
-                published_date=published_date,
-                authors=authors,
-                keywords=keywords,
-                title=title,
-                abstract=abstract,
-                introduction='NA',
-                results='NA',
-                conclusion='NA',
-                figures=[],
-                pdf_url=await self._get_url(session, pmc_ids),
-            ))
-
+        result = await asyncio.gather(*(self._process_article(session, searchkey, article) for article in articles))
+        
         return result

@@ -39,7 +39,7 @@ def process_results(results, success=[]):
 async def main():
     parser = argparse.ArgumentParser(description='Script to perform medical search.')
     parser.add_argument('-f', '--query_file', type=str, help="The file containing the search query", default="query.txt")
-    parser.add_argument("--concurrent", type=int, help="The number of concurrent requests to make", default=2)
+    parser.add_argument("--concurrent", type=int, help="The number of concurrent requests to make", default=10)
     parser.add_argument('-r', '--retries', type=int, default=3, help='Number of retries to make')
     parser.add_argument('-v', '--verbose', action='count', help='Enable verbose mode', default=0)
     
