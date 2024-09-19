@@ -25,7 +25,7 @@ class PubMed:
             'retmode': 'json',
             'retmax': 10_000,
             'retstart': token.get('retstart', 0),
-            'term': f'"{searchkey}"[Title:~3]',
+            'term': f'"{searchkey}"[Title:~3] AND free full text[sb]',
         }
 
         param_str = urllib.parse.urlencode(params, safe=',"][~:')
