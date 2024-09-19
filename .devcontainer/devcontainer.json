@@ -7,6 +7,7 @@
 	"features": {
 		"ghcr.io/devcontainers/features/azure-cli:1": {},
 		"ghcr.io/stuartleeks/dev-container-features/azure-cli-persistence:0": {},
+		"ghcr.io/jlaundry/devcontainer-features/azure-functions-core-tools:1": {},
 		"ghcr.io/stuartleeks/dev-container-features/shell-history:0": {},
 		"ghcr.io/devcontainers/features/docker-in-docker:2": {}
 	},
@@ -20,6 +21,7 @@
 				"esbenp.prettier-vscode",
 				"ms-python.python",
 				"ms-python.black-formatter",
+				"ms-azuretools.vscode-azurefunctions",
 				"github.copilot"
 			]
 		}
