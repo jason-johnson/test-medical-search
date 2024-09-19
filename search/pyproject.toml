@@ -11,6 +11,7 @@ requests = "^2.32.3"
 aiohttp = "^3.10.5"
 aiofiles = "^24.1.0"
 xmltodict = "^0.13.0"
+azure-functions = "^1.20.0"
 
 
 [build-system]

@@ -167,6 +167,20 @@ tests = ["cloudpickle", "hypothesis", "mypy (>=1.11.1)", "pympler", "pytest (>=4
 tests-mypy = ["mypy (>=1.11.1)", "pytest-mypy-plugins"]
 
 [[package]]
+name = "azure-functions"
+version = "1.20.0"
+description = "Azure Functions for Python"
+optional = false
+python-versions = "*"
+files = [
+    {file = "azure-functions-1.20.0.tar.gz", hash = "sha256:437e8889d7a75379159b457589cb74f6f966d3576067ae6649fafcd9058102e1"},
+    {file = "azure_functions-1.20.0-py3-none-any.whl", hash = "sha256:1d4ad15b10768b78046154d1da392e99634b64b4821dd091d5b9fe3600c49573"},
+]
+
+[package.extras]
+dev = ["azure-functions-durable", "coverage", "flake8 (>=4.0.1,<4.1.0)", "flake8-logging-format", "mypy", "pytest", "pytest-cov", "requests (==2.*)"]
+
+[[package]]
 name = "certifi"
 version = "2024.7.4"
 description = "Python package for providing Mozilla's CA Bundle."
@@ -627,4 +641,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "e1c1334b34aff69e9af3470a53d7532d7b2bb82e24012494934f0e607da1c281"
+content-hash = "86247ac13b8bce42ff047510600b581e96184b94ee9f5d67a6d6a6d93c0f082f"
