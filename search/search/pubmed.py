@@ -112,7 +112,7 @@ class PubMed:
                 results='NA',
                 conclusion='NA',
                 figures=[],
-                pdf_url=pdf_url,
+                pdf_url=pdf_url[0],
             )
 
     async def search(self, session, searchkey, token={}):
