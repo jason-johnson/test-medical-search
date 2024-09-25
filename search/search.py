@@ -1,9 +1,9 @@
 import argparse
 import json
 import sys
-from search.dynamed import Dynamed
-from search.pubmed import PubMed
-from search.semantic_scholar import SemanticScholar
+from searchlib.dynamed import Dynamed
+from searchlib.pubmed import PubMed
+from searchlib.semantic_scholar import SemanticScholar
 import asyncio
 import aiohttp
 import aiofiles
