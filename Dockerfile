@@ -8,7 +8,7 @@ ENV POETRY_NO_INTERACTION=1 \
     POETRY_CACHE_DIR=/tmp/poetry_cache
 
 WORKDIR /app
-COPY search/poetry.lock search/pyproject.toml ./
+COPY app/poetry.lock app/pyproject.toml ./
 
 RUN poetry install --no-interaction --no-root
 
@@ -24,4 +24,4 @@ ENV AzureWebJobsScriptRoot=/home/site/wwwroot \
 WORKDIR /home/site/wwwroot
 
 COPY --from=builder /app/.venv ./.venv
-COPY search/ ./
+COPY app/ ./

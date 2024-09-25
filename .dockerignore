@@ -1,4 +1,4 @@
-search/local.settings.json
-search/__pycache__
-search/tests/**
-search/tests
+app/local.settings.json
+app/__pycache__
+app/tests/**
+app/tests
