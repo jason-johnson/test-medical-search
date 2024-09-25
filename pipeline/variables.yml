@@ -1,0 +1,13 @@
+variables:
+  - name: terraformVersion
+    value: 1.9.6
+  - name: terraformPath
+    value: infrastructure
+  - name: servicePrinciple
+    value: pfimi-buchs
+  - name: terraformContainerName
+    value: terraform-svelte
+  - name: terraformStorageAccountName
+    value: sapbterraform
+  - name: terraformResourceGroupName
+    value: rg-manual
