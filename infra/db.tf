@@ -10,8 +10,8 @@ resource "azurerm_cosmosdb_account" "main" {
   resource_group_name       = azurerm_resource_group.main.name
   offer_type                = "Standard"
   kind                      = "GlobalDocumentDB"
-  enable_automatic_failover = false
-  enable_free_tier          = true
+  automatic_failover_enabled  = false
+  free_tier_enabled          = true
   consistency_policy {
     consistency_level       = "BoundedStaleness"
     max_interval_in_seconds = 300
@@ -26,29 +26,36 @@ resource "azurerm_cosmosdb_account" "main" {
   }
 }
 
-data "namep_custom_name" "sql_db" {
+data "namep_custom_name" "mongodb" {
   name     = "main"
   location = var.location
-  type     = "azurerm_cosmosdb_sql_database"
+  type     = "azurerm_cosmosdb_mongo_database"
 }
 
-resource "azurerm_cosmosdb_sql_database" "main" {
-  name                = data.namep_custom_name.sql_db.result
+resource "azurerm_cosmosdb_mongo_database" "main" {
+  name                = data.namep_custom_name.mongodb.result
   resource_group_name = azurerm_cosmosdb_account.main.resource_group_name
   account_name        = azurerm_cosmosdb_account.main.name
+  throughput          = 400
 }
 
-data "namep_custom_name" "sql_cont" {
+data "namep_custom_name" "mongocol" {
   name     = "main"
   location = var.location
-  type     = "azurerm_cosmosdb_sql_container"
+  type     = "azurerm_cosmosdb_mongo_collection"
 }
 
-resource "azurerm_cosmosdb_sql_container" "main" {
-  name                  = data.namep_custom_name.sql_cont.result
-  resource_group_name   = azurerm_cosmosdb_account.main.resource_group_name
-  account_name          = azurerm_cosmosdb_account.main.name
-  database_name         = azurerm_cosmosdb_sql_database.main.name
-  partition_key_path    = "/id"
-  partition_key_version = 1
+resource "azurerm_cosmosdb_mongo_collection" "main" {
+  name                = data.namep_custom_name.mongocol.result
+  resource_group_name = azurerm_cosmosdb_account.main.resource_group_name
+  account_name        = azurerm_cosmosdb_account.main.name
+  database_name       = azurerm_cosmosdb_mongo_database.main.name
+
+  default_ttl_seconds = "777"
+  throughput          = 400
+
+  index {
+    keys   = ["_id"]
+    unique = true
+  }
 }

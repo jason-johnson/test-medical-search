@@ -1,5 +1,6 @@
 terraform {
-  backend "azurerm" {}
+//  backend "azurerm" {}
+  backend "local" { }
 }
 
 provider "azurerm" {
@@ -25,13 +26,12 @@ provider "namep" {
   }
 
   azure_resource_formats = {
-    azurerm_key_vault = "#{SLUG}-gath-#{TOKEN_2}-#{SHORT_LOC}-#{NAME}#{-BRANCH}"
+    azurerm_key_vault = "#{SLUG}-ZI-#{TOKEN_2}-#{SHORT_LOC}-#{NAME}#{-BRANCH}"
   }
 
   custom_resource_formats = {
-    azuread_application_registration = "app-#{TOKEN_1}-#{TOKEN_2}-#{SHORT_LOC}-#{NAME}#{-BRANCH}"
-    azurerm_cosmosdb_sql_database = "#{TOKEN_1}"
-    azurerm_cosmosdb_sql_container = "#{TOKEN_1}-container"
+    azurerm_cosmosdb_mongo_database = "#{TOKEN_1}"
+    azurerm_cosmosdb_mongo_collection = "#{TOKEN_1}-collection"
   }
 }
 
