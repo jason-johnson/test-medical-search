@@ -1,6 +1,6 @@
 import azure.functions as func
 import logging
-from search import search
+from app import search
 
 app = func.FunctionApp()
 
