@@ -32,6 +32,7 @@ provider "namep" {
   custom_resource_formats = {
     azurerm_cosmosdb_mongo_database = "#{TOKEN_1}"
     azurerm_cosmosdb_mongo_collection = "#{TOKEN_1}-collection"
+    azurerm_cosmosdb_table = "#{TOKEN_1}"
   }
 }
 

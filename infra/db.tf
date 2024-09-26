@@ -9,9 +9,8 @@ resource "azurerm_cosmosdb_account" "main" {
   location                  = var.location
   resource_group_name       = azurerm_resource_group.main.name
   offer_type                = "Standard"
-  kind                      = "GlobalDocumentDB"
+  kind                      = "MongoDB"
   automatic_failover_enabled  = false
-  free_tier_enabled          = true
   consistency_policy {
     consistency_level       = "BoundedStaleness"
     max_interval_in_seconds = 300
@@ -21,9 +20,12 @@ resource "azurerm_cosmosdb_account" "main" {
     location          = var.location
     failover_priority = 0
   }
-  capabilities {
-    name = "EnableServerless"
-  }
+}
+
+data "namep_custom_name" "cosmostable" {
+  name     = "main"
+  location = var.location
+  type     = "azurerm_cosmosdb_table"
 }
 
 data "namep_custom_name" "mongodb" {
