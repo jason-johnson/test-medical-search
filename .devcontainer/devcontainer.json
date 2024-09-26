@@ -9,6 +9,7 @@
 		"ghcr.io/stuartleeks/dev-container-features/azure-cli-persistence:0": {},
 		"ghcr.io/jlaundry/devcontainer-features/azure-functions-core-tools:1": {},
 		"ghcr.io/stuartleeks/dev-container-features/shell-history:0": {},
+		"ghcr.io/devcontainers/features/terraform:1": {},
 		"ghcr.io/devcontainers/features/docker-in-docker:2": {}
 	},
 	"customizations": {
@@ -22,6 +23,7 @@
 				"ms-python.python",
 				"ms-python.black-formatter",
 				"ms-azuretools.vscode-azurefunctions",
+				"hashicorp.terraform",
 				"github.copilot"
 			]
 		}
