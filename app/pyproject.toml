@@ -12,6 +12,7 @@ aiohttp = "^3.10.5"
 aiofiles = "^24.1.0"
 xmltodict = "^0.13.0"
 azure-functions = "^1.20.0"
+pymongo = "^4.9.1"
 
 
 [build-system]
