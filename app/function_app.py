@@ -53,10 +53,13 @@ async def Search(req: func.HttpRequest) -> func.HttpResponse:
             keywords = req_body.get('keywords')
 
     if keywords:
-        keywords = keywords.split(',')
-        results = await search(keywords, 10, 3)
-        await save_to_db(results)        
-        return func.HttpResponse(f"Got: '{keywords} with {len(results)} results'. This HTTP triggered function executed successfully.")
+        try:
+            keywords = keywords.split(',')
+            results = await search(keywords, 10, 3)
+            await save_to_db(results)        
+            return func.HttpResponse(f"Got: '{keywords} with {len(results)} results'. This HTTP triggered function executed successfully.")
+        except Exception as e:
+            return func.HttpResponse(f"An error occured: {str(e)}", status_code=500)
     else:
         return func.HttpResponse(
              "This HTTP triggered function executed successfully, but recieved no keywords",
