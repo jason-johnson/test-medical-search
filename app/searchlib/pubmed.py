@@ -97,6 +97,15 @@ class PubMed:
                 abstract = [f"{a.get('@Label', '')}\n{a.get('#text', '')}" for a in abstract]
                 abstract = ' '.join(abstract)
 
+        citationRefList = entry.get('PubmedData', {}).get('ReferenceList', {})
+        if citationRefList.__class__.__name__ == 'dict':
+            citationRefList = citationRefList.get('Reference', [])
+        elif citationRefList.__class__.__name__ == 'list':
+            refs = [ref.get('Reference') for ref in citationRefList]
+            citationRefList = [ref for ref in refs if ref is not None]
+
+        citations = len(citationRefList)
+
         pdf_url = await self._get_url(session, pmc_ids),
 
         return Success(
@@ -106,6 +115,7 @@ class PubMed:
                 published_date=published_date,
                 authors=authors,
                 keywords=keywords,
+                citations=citations,
                 title=title,
                 abstract=abstract,
                 introduction='NA',

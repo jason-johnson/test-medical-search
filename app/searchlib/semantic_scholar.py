@@ -45,6 +45,7 @@ class SemanticScholar:
                     published_date=data.get('year', ''),
                     authors=[author.get('name', '') for author in data.get('authors', [])],
                     keywords=[],
+                    citations=data.get('citationCount', 0),
                     title=data.get('title', ''),
                     abstract=data.get('abstract', 'NA'),
                     introduction='NA',
