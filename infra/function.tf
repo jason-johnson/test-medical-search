@@ -47,8 +47,8 @@ resource "azurerm_linux_function_app" "main" {
     container_registry_use_managed_identity = true
     application_stack {
       docker {
-        registry_url = azurerm_container_registry.acr.login_server
-        image_name   = "message-func"
+        registry_url = "https://index.docker.io/v1"
+        image_name   = "jason0077/medical-search"
         image_tag    = "latest"
       }
     }
@@ -62,6 +62,9 @@ resource "azurerm_linux_function_app" "main" {
 
   app_settings = {
     "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
+    "COSMOS_CONNECTION_STRING"            = azurerm_cosmosdb_account.main.primary_mongodb_connection_string
+    "COSMOS_DATABASE_NAME"                = azurerm_cosmosdb_mongo_database.main.name
+    "COSMOS_CONTAINER_NAME"               = azurerm_cosmosdb_mongo_collection.main.name
   }
 
   identity {
