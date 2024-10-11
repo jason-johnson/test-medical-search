@@ -65,3 +65,21 @@ async def Search(req: func.HttpRequest) -> func.HttpResponse:
              "This HTTP triggered function executed successfully, but recieved no keywords",
              status_code=400
         )
+    
+@app.route(route="Health", auth_level=func.AuthLevel.ANONYMOUS)
+async def Health(req: func.HttpRequest) -> func.HttpResponse:
+    return func.HttpResponse("OK", status_code=200)
+
+@app.route(route="Delete", auth_level=func.AuthLevel.ANONYMOUS)
+async def Delete(req: func.HttpRequest) -> func.HttpResponse:
+    CONNECTION_STRING = os.environ.get("COSMOS_CONNECTION_STRING")
+    DATATBASE_NAME = os.environ.get("COSMOS_DATABASE_NAME")
+    COLLECTION_NAME = os.environ.get("COSMOS_COLLECTION_NAME")
+
+    client = pymongo.MongoClient(CONNECTION_STRING)
+    database = client.get_database(DATATBASE_NAME)
+    collection = database.get_collection(COLLECTION_NAME)
+    collection.delete_many({})
+    client.close()
+
+    return func.HttpResponse("Deleted all documents", status_code=200)
