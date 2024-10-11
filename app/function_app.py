@@ -27,11 +27,12 @@ async def save_to_db(results):
         logging.error(f"Invalid batch size: '{BATCH_SIZE}'")
 
     results_chunks = batched(results, batch_size)
-    logging.info(f"Saving {len(results)} results to the database in {len(results_chunks)} chunks")
 
     client = pymongo.MongoClient(CONNECTION_STRING)
     database = client.get_database(DATATBASE_NAME)
     collection = database.get_collection(COLLECTION_NAME)
+
+    logging.debug(f"Database connection established.")
 
     for chunk in results_chunks:
         collection.insert_many(chunk)
@@ -74,14 +75,21 @@ async def Health(req: func.HttpRequest) -> func.HttpResponse:
 
 @app.route(route="Delete", auth_level=func.AuthLevel.ANONYMOUS)
 async def Delete(req: func.HttpRequest) -> func.HttpResponse:
-    CONNECTION_STRING = os.environ.get("COSMOS_CONNECTION_STRING")
-    DATATBASE_NAME = os.environ.get("COSMOS_DATABASE_NAME")
-    COLLECTION_NAME = os.environ.get("COSMOS_COLLECTION_NAME")
+    logging.info('Delete request recieved.')
 
-    client = pymongo.MongoClient(CONNECTION_STRING)
-    database = client.get_database(DATATBASE_NAME)
-    collection = database.get_collection(COLLECTION_NAME)
-    collection.delete_many({})
-    client.close()
+    try:
+        CONNECTION_STRING = os.environ.get("COSMOS_CONNECTION_STRING")
+        DATATBASE_NAME = os.environ.get("COSMOS_DATABASE_NAME")
+        COLLECTION_NAME = os.environ.get("COSMOS_COLLECTION_NAME")
 
+        client = pymongo.MongoClient(CONNECTION_STRING)
+        database = client.get_database(DATATBASE_NAME)
+        collection = database.get_collection(COLLECTION_NAME)
+        collection.delete_many({})
+        client.close()
+    except Exception as e:
+        logging.error(f'An error occured: {str(e)}')
+        return func.HttpResponse(f"An error occured: {str(e)}", status_code=500)
+
+    logging.info('Delete request completed.')
     return func.HttpResponse("Deleted all documents", status_code=200)
