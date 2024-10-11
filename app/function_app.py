@@ -27,6 +27,7 @@ async def save_to_db(results):
         logging.error(f"Invalid batch size: '{BATCH_SIZE}'")
 
     results_chunks = batched(results, batch_size)
+    logging.info(f"Saving {len(results)} results to the database in {len(results_chunks)} chunks")
 
     client = pymongo.MongoClient(CONNECTION_STRING)
     database = client.get_database(DATATBASE_NAME)
@@ -59,6 +60,7 @@ async def Search(req: func.HttpRequest) -> func.HttpResponse:
             await save_to_db(results)        
             return func.HttpResponse(f"Got: '{keywords} with {len(results)} results'. This HTTP triggered function executed successfully.")
         except Exception as e:
+            logging.error(f'An error occured: {str(e)}')
             return func.HttpResponse(f"An error occured: {str(e)}", status_code=500)
     else:
         return func.HttpResponse(
