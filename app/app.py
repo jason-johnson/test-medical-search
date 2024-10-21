@@ -12,14 +12,14 @@ import aiofiles
 import logging
 
 
-async def query(client, query, session):
+async def query(client, query):
     logging.info(f'Querying {client.__class__.__name__}')
-    resp = await client.search(session, query)
+    resp = await client.search(query)
     return resp
 
-async def query_redo(redo, session):
+async def query_redo(redo):
     logging.info(f'Redoing {redo}')
-    resp = await redo.client.search(session, redo.searchkey, redo.token)
+    resp = await redo.client.search(redo.searchkey, redo.token)
     return resp
 
 def process_results(results, success=[]):
@@ -36,20 +36,26 @@ def process_results(results, success=[]):
         success.extend(data)
     return redo, success, len(successes) > 0
 
-async def search(search_keywords, concurrent, retries):
-    conn = aiohttp.TCPConnector(limit=concurrent)
+async def search(search_keywords, concurrent_pm, concurrent_ss, concurrent_dm, retries):
+    pm_conn = aiohttp.TCPConnector(limit=concurrent_pm)
+    ss_conn = aiohttp.TCPConnector(limit=concurrent_ss)
+#    dm_conn = aiohttp.TCPConnector(limit=concurrent_dm)
     # set total=None because the POST is really slow and the defeault will cause any request still waiting to be processed after "total" seconds to fail.  Also set read to 10 minutes
     timeout = aiohttp.ClientTimeout(total=None, sock_connect=10, sock_read=600)
 
-    async with aiohttp.ClientSession(connector=conn, timeout=timeout) as session:
-        results = await asyncio.gather(*(query(client, searchkeyword, session) for client in [SemanticScholar(), PubMed()] for searchkeyword in search_keywords))
+    async with (
+        aiohttp.ClientSession(connector=pm_conn, timeout=timeout) as pm_session,
+        aiohttp.ClientSession(connector=ss_conn, timeout=timeout) as ss_session,
+#        aiohttp.ClientSession(connector=dm_conn, timeout=timeout) as dm_session,
+    ):
+        results = await asyncio.gather(*(query(client, searchkeyword) for client in [SemanticScholar(ss_session), PubMed(pm_session)] for searchkeyword in search_keywords))
         logging.info("Finalized all. Return is a list of len {} outputs.".format(len(results)))
 
         redo, success, _ = process_results(results)
 
         while redo and retries > 0:
             logging.info(f"Retrying {len(redo)} results.")
-            results = await asyncio.gather(*(query_redo(r, session) for r in redo))
+            results = await asyncio.gather(*(query_redo(r) for r in redo))
             redo, success, any_succeded = process_results(results, success)
             if not any_succeded:
                 retries -= 1
@@ -64,7 +70,9 @@ async def main():
     parser.add_argument('-f', '--query_file', type=str, help="The file containing the search query", default="query.txt")
     parser.add_argument('-o', '--output_file', type=str, help="The file to write the output to", default=None)
     parser.add_argument('--with-pdf-only', action='store_true', help="Only return results with PDFs", default=False)
-    parser.add_argument("--concurrent", type=int, help="The number of concurrent requests to make", default=10)
+    parser.add_argument("--concurrent-pm", type=int, help="The number of concurrent pubmed requests to make", default=10)
+    parser.add_argument('--concurrent-ss', type=int, help="The number of concurrent Semantic Scholar requests to make", default=50)
+    parser.add_argument('--concurrent-dm', type=int, help="The number of concurrent Dynamed requests to make", default=10)
     parser.add_argument('-r', '--retries', type=int, default=3, help='Number of retries to make')
     parser.add_argument('-v', '--verbose', action='count', help='Enable verbose mode', default=0)
     
@@ -80,7 +88,7 @@ async def main():
         async for line in f:
             search_keywords.append(line.strip())
 
-    results = await search(search_keywords, args.concurrent, args.retries)
+    results = await search(search_keywords, args.concurrent_pm, args.concurrent_ss, args.concurrent_dm, args.retries)
 
     if args.output_file:
         async with aiofiles.open(args.output_file, mode='w') as f:

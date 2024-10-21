@@ -7,10 +7,11 @@ from .results import Redo, Success
 
 
 class PubMed:
-    def __init__(self):
+    def __init__(self, session):
         self.base_search_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
         self.base_details_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
         self.key = os.environ.get('PUBMED_API_KEY')
+        self.session = session
         self.headers = {
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9, application/json",
         }
@@ -19,7 +20,7 @@ class PubMed:
             self.headers['Authorization'] = f'Bearer {self.key}'
             logging.debug("Using API key for Semantic Scholar")
 
-    async def _get_ids(self, session, searchkey, token={}):
+    async def _get_ids(self, searchkey, token={}):
         params = {
             'db': 'pubmed',
             'retmode': 'json',
@@ -30,7 +31,7 @@ class PubMed:
 
         param_str = urllib.parse.urlencode(params, safe=',"][~:')
 
-        async with session.get(self.base_search_url, params=param_str, headers=self.headers) as resp:
+        async with self.session.get(self.base_search_url, params=param_str, headers=self.headers) as resp:
             if resp.status != 200:
                 response = await resp.text()
                 logging.error(f"Error: {self.__class__.__name__}({searchkey}) - {response}")
@@ -39,7 +40,7 @@ class PubMed:
                 response = await resp.json()
                 return response
             
-    async def _get_details(self, session, ids, token):
+    async def _get_details(self, ids, token):
         params = {
             'db': 'pubmed',
             'retmode': 'xml',
@@ -48,7 +49,7 @@ class PubMed:
 
         param_str = urllib.parse.urlencode(params, safe=',"][~:')
 
-        async with session.post(self.base_details_url, params=param_str, headers=self.headers, data={'id': ','.join(ids)}) as resp:
+        async with self.session.post(self.base_details_url, params=param_str, headers=self.headers, data={'id': ','.join(ids)}) as resp:
             if resp.status != 200:
                 logging.error(f"Error: {resp.error}")
                 return Redo(searchkey="id", token=token)
@@ -57,11 +58,11 @@ class PubMed:
                 data = xmltodict.parse(response)
                 return data
             
-    async def _get_url(self, session, pmc_ids):
+    async def _get_url(self, pmc_ids):
         for pmc_id in pmc_ids:
             url = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{pmc_id}/pdf/"
             try:
-                async with session.head(url) as resp:
+                async with self.session.head(url) as resp:
                     logging.debug(f"Checking {url} - {resp.status}")
                     if resp.status == 200:
                         return url
@@ -74,7 +75,7 @@ class PubMed:
                 
         return ''
     
-    async def _process_article(self, session, searchkey, entry):
+    async def _process_article(self, searchkey, entry):
         data = entry.get('MedlineCitation', {})
         pmc_id = data.get('PMID', {}).get('#text', '')
         article_ids = entry.get('PubmedData', {}).get('ArticleIdList', {}).get('ArticleId', [])
@@ -106,7 +107,7 @@ class PubMed:
 
         citations = len(citationRefList)
 
-        pdf_url = await self._get_url(session, pmc_ids),
+        pdf_url = await self._get_url(pmc_ids),
 
         return Success(
                 source=self.__class__.__name__,
@@ -125,8 +126,8 @@ class PubMed:
                 pdf_url=pdf_url[0],
             )
 
-    async def search(self, session, searchkey, token={}):
-        search_result = await self._get_ids(session, searchkey, token)
+    async def search(self, searchkey, token={}):
+        search_result = await self._get_ids(searchkey, token)
 
         if search_result.__class__.__name__ == 'Redo':
             return search_result
@@ -135,13 +136,13 @@ class PubMed:
 
         details_result = None
         try:
-            details_result = await self._get_details(session, ids, token)
+            details_result = await self._get_details(ids, token)
         except Exception as e:
             logging.error(f"Error: {self.__class__.__name__}({searchkey}) - {e}")
             return Redo(searchkey, self, token)
         
         articles = details_result.get('PubmedArticleSet', {}).get('PubmedArticle', [])
 
-        result = await asyncio.gather(*(self._process_article(session, searchkey, article) for article in articles))
+        result = await asyncio.gather(*(self._process_article(searchkey, article) for article in articles))
         
         return result

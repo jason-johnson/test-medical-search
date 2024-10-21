@@ -44,6 +44,9 @@ async def save_to_db(results):
 @app.route(route="Search", auth_level=func.AuthLevel.ANONYMOUS)
 async def Search(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
+    concurrent_pm = os.environ.get("concurrent_pubmed", 10)
+    concurrent_ss = os.environ.get("concurrent_semantic_scholar", 50)
+    concurrent_dm = os.environ.get("concurrent_dynamed", 10)
 
     keywords = req.params.get('keywords')
     if not keywords:
@@ -57,7 +60,7 @@ async def Search(req: func.HttpRequest) -> func.HttpResponse:
     if keywords:
         try:
             keywords = keywords.split(',')
-            results = await search(keywords, 10, 3)
+            results = await search(keywords, concurrent_pm, concurrent_ss, concurrent_dm, 3)
             await save_to_db(results)        
             return func.HttpResponse(f"Got: '{keywords} with {len(results)} results'. This HTTP triggered function executed successfully.")
         except Exception as e:

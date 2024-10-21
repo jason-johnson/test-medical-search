@@ -6,11 +6,12 @@ from datetime import datetime
 from .results import Partial, Redo, Success
 
 class SemanticScholar:
-    def __init__(self):
+    def __init__(self, session):
         self.base_url = "https://api.semanticscholar.org/graph/v1/paper/search/bulk"
         self.key = os.environ.get('SS_API_KEY')
+        self.session = session
 
-    async def search(self, session, searchkey, token=None):
+    async def search(self, searchkey, token=None):
         current_year = datetime.now().year
 
         params = {
@@ -30,7 +31,7 @@ class SemanticScholar:
 
         param_str = urllib.parse.urlencode(params, safe=',"')
 
-        async with session.get(self.base_url, params=param_str, headers=headers) as resp:
+        async with self.session.get(self.base_url, params=param_str, headers=headers) as resp:
             response = await resp.json()
             if response.get('code', 0) == '429':
                 return Redo(searchkey, self, token)
