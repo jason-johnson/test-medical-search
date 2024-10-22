@@ -19,7 +19,8 @@ class Success:
             "results": results,
             "conclusion": conclusion,
             "figures": figures,
-            "pdf_url": pdf_url
+            "pdf_url": pdf_url,
+            "ai_processed": False
         }
 
     def __str__(self):
