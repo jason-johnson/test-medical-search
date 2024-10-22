@@ -134,16 +134,14 @@ def UpdateAI(updateAI: func.TimerRequest) -> None:
         logging.info('DB AI Update timer is past due!')
 
     logging.info('DB AI Update timer is starting')
-    batch_size = os.environ.get("COSMOS_BATCH_SIZE")
+    batch_size = os.environ.get("COSMOS_AI_BATCH_SIZE", 300)
+    batch_size = int(batch_size)
+    logging.info(f'Only processing first {batch_size} documents')
 
     client, collection = get_db_connection()
 
     try:
-        cursor = collection.find({'ai_processed': False})
-        if batch_size:
-            batch_size = int(batch_size)
-            logging.info(f'Only processing first {batch_size} documents')
-            cursor = cursor.limit(batch_size)
+        cursor = collection.find({'ai_processed': False}, limit=batch_size)
         docs = cursor.to_list()
         logging.info(f'Found {len(docs)} documents to process')
         for doc in docs:
