@@ -125,3 +125,23 @@ async def ClearDatabase(req: func.HttpRequest) -> func.HttpResponse:
 
     logging.info('Clear Database request completed.')
     return func.HttpResponse("Deleted all documents", status_code=200)
+
+
+@app.function_name(name="updateAI")
+@app.timer_trigger(schedule="0 */15 * * * *", arg_name="updateAI", run_on_startup=True)
+def test_function(updateAI: func.TimerRequest) -> None:
+    if updateAI.past_due:
+        logging.info('DB AI Update timer is past due!')
+
+    logging.info('DB AI Update timer is starting')
+    client, collection = get_db_connection()
+
+    try:
+        docs = collection.find({'ai_processed': False})
+        logging.info(f'Found {docs.count()} documents to process')
+        for doc in docs:
+            pass
+    except Exception as e:
+        logging.error(f'An error occured: {str(e)}')
+    finally:
+        client.close()
