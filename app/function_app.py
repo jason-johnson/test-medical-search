@@ -88,9 +88,6 @@ async def Search(req: func.HttpRequest) -> func.HttpResponse:
             request_id = f'{request_id} - {keywords}'
             logging.info(f'{request_id} - Starting')
 
-            for keyword in keywords:
-                delete_keyword(keyword)
-
             results = await search(keywords, concurrent_pm, concurrent_ss, concurrent_dm, retries)
             await save_to_db(results)
             return func.HttpResponse(f"Got: '{keywords} with {len(results)} results'. This HTTP triggered function executed successfully.")
@@ -109,6 +106,34 @@ async def Search(req: func.HttpRequest) -> func.HttpResponse:
 @app.route(route="Health", auth_level=func.AuthLevel.ANONYMOUS)
 async def Health(req: func.HttpRequest) -> func.HttpResponse:
     return func.HttpResponse("OK", status_code=200)
+
+@app.route(route="Delete", auth_level=func.AuthLevel.ANONYMOUS)
+async def Delete(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info('Delete request recieved.')
+
+    keywords = req.params.get('keywords')
+    if not keywords:
+        try:
+            req_body = req.get_json()
+        except ValueError:
+            pass
+        else:
+            keywords = req_body.get('keywords')
+
+    if keywords:
+        try:
+            keywords = keywords.split(',')
+            for keyword in keywords:
+                delete_keyword(keyword)
+            return func.HttpResponse(f"Deleted: '{keywords}'. This HTTP triggered function executed successfully.")
+        except Exception as e:
+            logging.error(f'An error occured: {str(e)}')
+            return func.HttpResponse(f"An error occured: {str(e)}", status_code=500)
+    else:
+        return func.HttpResponse(
+            "This HTTP triggered function executed successfully, but recieved no keywords",
+            status_code=400
+        )
 
 
 @app.route(route="ClearDatabase", auth_level=func.AuthLevel.ANONYMOUS)
