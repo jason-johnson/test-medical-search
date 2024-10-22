@@ -21,6 +21,18 @@ def get_db_connection():
     return client, collection
 
 
+def delete_keyword(keyword):
+    if not os.environ.get("COSMOS_DELETE_KEYWORD", True):
+        logging.info("COSMOS_DELETE_KEYWORD is false. Skipping deletion")
+        return
+
+    logging.info(f"Deleting keyword: {keyword} from DB")
+    client, collection = get_db_connection()
+    docs = collection.delete_many({"searchkey": keyword})
+    logging.info(f"Deleted {docs.deleted_count} documents")
+    client.close()
+
+
 def batched(iterable, chunk_size):
     iterator = iter(iterable)
     while chunk := tuple(islice(iterator, chunk_size)):
@@ -75,6 +87,10 @@ async def Search(req: func.HttpRequest) -> func.HttpResponse:
             keywords = keywords.split(',')
             request_id = f'{request_id} - {keywords}'
             logging.info(f'{request_id} - Starting')
+
+            for keyword in keywords:
+                delete_keyword(keyword)
+
             results = await search(keywords, concurrent_pm, concurrent_ss, concurrent_dm, retries)
             await save_to_db(results)
             return func.HttpResponse(f"Got: '{keywords} with {len(results)} results'. This HTTP triggered function executed successfully.")
