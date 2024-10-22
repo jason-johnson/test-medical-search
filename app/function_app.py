@@ -1,5 +1,5 @@
 import asyncio
-import datetime
+from datetime import datetime
 import os
 import azure.functions as func
 import logging
@@ -139,12 +139,13 @@ def UpdateAI(updateAI: func.TimerRequest) -> None:
     client, collection = get_db_connection()
 
     try:
-        docs = collection.find({'ai_processed': False})
-        logging.info(f'Found {docs.count()} documents to process')
+        cursor = collection.find({'ai_processed': False})
         if batch_size:
             batch_size = int(batch_size)
             logging.info(f'Only processing first {batch_size} documents')
-            docs = docs.limit(batch_size)
+            cursor = cursor.limit(batch_size)
+        docs = cursor.to_list()
+        logging.info(f'Found {len(docs)} documents to process')
         for doc in docs:
             logging.info(f'Processing document: {doc["_id"]}')
             pass
