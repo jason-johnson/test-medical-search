@@ -129,17 +129,24 @@ async def ClearDatabase(req: func.HttpRequest) -> func.HttpResponse:
 
 @app.function_name(name="updateAI")
 @app.timer_trigger(schedule="0 */15 * * * *", arg_name="updateAI", run_on_startup=True)
-def test_function(updateAI: func.TimerRequest) -> None:
+def UpdateAI(updateAI: func.TimerRequest) -> None:
     if updateAI.past_due:
         logging.info('DB AI Update timer is past due!')
 
     logging.info('DB AI Update timer is starting')
+    batch_size = os.environ.get("COSMOS_BATCH_SIZE")
+
     client, collection = get_db_connection()
 
     try:
         docs = collection.find({'ai_processed': False})
         logging.info(f'Found {docs.count()} documents to process')
+        if batch_size:
+            batch_size = int(batch_size)
+            logging.info(f'Only processing first {batch_size} documents')
+            docs = docs.limit(batch_size)
         for doc in docs:
+            logging.info(f'Processing document: {doc["_id"]}')
             pass
     except Exception as e:
         logging.error(f'An error occured: {str(e)}')
