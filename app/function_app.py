@@ -22,10 +22,6 @@ def get_db_connection():
 
 
 def delete_keyword(keyword):
-    if not os.environ.get("COSMOS_DELETE_KEYWORD", True):
-        logging.info("COSMOS_DELETE_KEYWORD is false. Skipping deletion")
-        return
-
     logging.info(f"Deleting keyword: {keyword} from DB")
     client, collection = get_db_connection()
     docs = collection.delete_many({"searchkey": keyword})
