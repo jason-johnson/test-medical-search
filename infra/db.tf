@@ -53,7 +53,7 @@ resource "azurerm_cosmosdb_mongo_collection" "main" {
   account_name        = azurerm_cosmosdb_account.main.name
   database_name       = azurerm_cosmosdb_mongo_database.main.name
 
-  throughput          = 400
+  throughput          = 4000
 
   index {
     keys   = ["_id"]
