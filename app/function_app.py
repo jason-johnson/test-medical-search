@@ -1,6 +1,7 @@
 import asyncio
 from datetime import datetime
 import os
+from ai.processor import PDFProcessor
 import azure.functions as func
 import logging
 from app import search
@@ -159,6 +160,7 @@ def UpdateAI(updateAI: func.TimerRequest) -> None:
     batch_size = int(batch_size)
     logging.info(f'Only processing first {batch_size} documents')
 
+    processor = PDFProcessor()
     client, collection = get_db_connection()
 
     try:
@@ -167,7 +169,25 @@ def UpdateAI(updateAI: func.TimerRequest) -> None:
         logging.info(f'Found {len(docs)} documents to process')
         for doc in docs:
             logging.info(f'Processing document: {doc["_id"]}')
-            pass
+            url = doc["pdf_url"]
+
+            processed_data = processor.process_pdf(url, ["introduction", "results", "conclusion"])
+            new_values = { 
+                "markdown_sections": processed_data["markdown_sections"],
+                "introduction": processed_data["introduction"],
+                "results": processed_data["results"],
+                "conclusion": processed_data["conclusion"],
+                "figures": processed_data["images"],
+                "tables": processed_data["tables"],
+                "status": {"analysis": "", "ai_processing": processed_data["ai_processing"]}
+            }
+            update = { "$set": new_values }
+            result = collection.update_one({ "_id": doc["_id"] }, update)
+            if result.modified_count == 1:
+                logging.info(f'Updated document: {doc["_id"]}')
+            else:
+                logging.warning(f'Failed to update document for some reason: {doc["_id"]}')
+
     except Exception as e:
         logging.error(f'An error occured: {str(e)}')
     finally:
