@@ -13,6 +13,11 @@ aiofiles = "^24.1.0"
 xmltodict = "^0.13.0"
 azure-functions = "^1.20.0"
 pymongo = "^4.9.1"
+pillow = "^11.0.0"
+pymupdf = "^1.24.12"
+openai = "^1.52.2"
+azure-core = "^1.31.0"
+azure-ai-documentintelligence = "^1.0.0b4"
 
 
 [build-system]
