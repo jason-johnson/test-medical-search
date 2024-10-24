@@ -17,7 +17,7 @@ class PDFProcessor:
         # Azure Form Recognizer credentials
         self.di_client = DocumentIntelligenceClient(
             endpoint=os.environ.get("AZURE_FORM_RECOGNIZER_ENDPOINT"),
-            credential=AzureKeyCredential(os.environ.get("AZURE_FORM_RECOGNIZER_KEY"))""
+            credential=AzureKeyCredential(os.environ.get("AZURE_FORM_RECOGNIZER_KEY"))
         )
 
         # Azure OpenAI
