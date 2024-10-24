@@ -51,8 +51,13 @@ class PubMed:
 
         async with self.session.post(self.base_details_url, params=param_str, headers=self.headers, data={'id': ','.join(ids)}) as resp:
             if resp.status != 200:
-                logging.error(f"Error: {resp.error}")
-                return Redo(searchkey="id", token=token)
+                if hasattr(resp, 'error'):
+                    logging.error(f"Error: {resp.error}")
+                elif hasattr(resp, 'reason'):
+                    logging.error(f"Error: {resp.reason}")
+                else:
+                    logging.error(f"Error: (no error or reason field found) {self.__class__.__name__}({ids}) - {resp.status}")
+                return Redo("id", self, token)
             else:
                 response = await resp.text()
                 data = xmltodict.parse(response)
@@ -140,6 +145,9 @@ class PubMed:
         except Exception as e:
             logging.error(f"Error: {self.__class__.__name__}({searchkey}) - {e}")
             return Redo(searchkey, self, token)
+        
+        if details_result.__class__.__name__ == 'Redo':
+            return details_result
         
         articles = details_result.get('PubmedArticleSet', {}).get('PubmedArticle', [])
 
