@@ -1,4 +1,5 @@
 import argparse
+from functools import reduce
 import json
 import sys
 from searchlib.dynamed import Dynamed
@@ -13,7 +14,7 @@ import logging
 
 
 async def query(client, query):
-    logging.info(f'Querying {client.__class__.__name__}')
+    logging.info(f'Querying {client.__class__.__name__} - {query}')
     resp = await client.search(query)
     return resp
 
@@ -49,9 +50,10 @@ async def search(search_keywords, concurrent_pm, concurrent_ss, concurrent_dm, r
 #        aiohttp.ClientSession(connector=dm_conn, timeout=timeout) as dm_session,
     ):
         results = await asyncio.gather(*(query(client, searchkeyword) for client in [SemanticScholar(ss_session), PubMed(pm_session)] for searchkeyword in search_keywords))
-        logging.info("Finalized all. Return is a list of len {} outputs.".format(len(results)))
+        logging.info(f"Finalized initial run. Return is a list of {len(results)} outputs (total elements: {reduce(lambda count, l: count + len(l), results, 0)}).")
 
         redo, success, _ = process_results(results)
+        logging.info(f"Initial run - Success: {len(success)}, Redos: {len(redo)}")
 
         while redo and retries > 0:
             logging.info(f"Retrying {len(redo)} results.")
