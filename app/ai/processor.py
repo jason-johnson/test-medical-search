@@ -17,16 +17,19 @@ class PDFProcessor:
         # Azure Form Recognizer credentials
         self.di_client = DocumentIntelligenceClient(
             endpoint=os.environ.get("AZURE_FORM_RECOGNIZER_ENDPOINT"),
-            credential=AzureKeyCredential(os.environ.get("AZURE_FORM_RECOGNIZER_KEY"))
+            credential=AzureKeyCredential(
+                os.environ.get("AZURE_FORM_RECOGNIZER_KEY"))
         )
 
         # Azure OpenAI
         self.aoai_client = AzureOpenAI(
             api_key=os.environ.get("OPENAI_API_KEY"),
-            api_version=os.environ.get("OPENAI_API_VERSION", "2024-02-15-preview"),
+            api_version=os.environ.get(
+                "OPENAI_API_VERSION", "2024-02-15-preview"),
             azure_endpoint=os.environ.get("OPENAI_AZURE_ENDPOINT")
         )
-        self.deployment_name = os.environ.get("OPENAI_DEPLOYMENT_NAME", 'GPT-4o-20240513-global')
+        self.deployment_name = os.environ.get(
+            "OPENAI_DEPLOYMENT_NAME", 'GPT-4o-20240513-global')
 
     @staticmethod
     def download_pdf_from_url(url):
@@ -287,6 +290,27 @@ class PDFProcessor:
                     images = self.extract_images_from_pdf(url, poller_result)
                     tables = self.extract_tables(poller_result)
 
+                    return {
+                        "markdown_sections": markdown_sections,
+                        "introduction": introduction,
+                        "results": results,
+                        "conclusion": conclusion,
+                        "images": images,
+                        "tables": tables,
+                        "ai_processing": "successful"
+                    }
+                else:
+                    logging.warning(f"\nNo text extracted from the PDF: {url}")
+                    return {
+                        "markdown_sections": "",
+                        "introduction": "",
+                        "results": "",
+                        "conclusion": "",
+                        "images": "",
+                        "tables": "",
+                        "ai_processing": "failed"
+                    }
+
             except requests.RequestException as e:
                 logging.error(f"\nError checking the URL {url}: {e}")
                 return {
@@ -298,13 +322,3 @@ class PDFProcessor:
                     "tables": "",
                     "ai_processing": "failed"
                 }
-
-            return {
-                "markdown_sections": markdown_sections,
-                "introduction": introduction,
-                "results": results,
-                "conclusion": conclusion,
-                "images": images,
-                "tables": tables,
-                "ai_processing": "successful"
-            }
