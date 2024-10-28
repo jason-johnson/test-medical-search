@@ -263,7 +263,7 @@ class PDFProcessor:
                 "conclusion": "",
                 "images": "",
                 "tables": "",
-                "ai_processing": "unsupported"
+                "ai_processing": "unsupported (no URL)"
             }
         else:
             try:
@@ -279,7 +279,7 @@ class PDFProcessor:
                         "conclusion": "",
                         "images": "",
                         "tables": "",
-                        "ai_processing": "unsupported"
+                        "ai_processing": "unsupported (not a PDF)"
                     }
 
                 logging.info(f"\nProcessing URL: {url}")
@@ -308,7 +308,7 @@ class PDFProcessor:
                         "conclusion": "",
                         "images": "",
                         "tables": "",
-                        "ai_processing": "failed"
+                        "ai_processing": "failed (no text extracted)"
                     }
 
             except requests.RequestException as e:
@@ -320,5 +320,5 @@ class PDFProcessor:
                     "conclusion": "",
                     "images": "",
                     "tables": "",
-                    "ai_processing": "failed"
+                    "ai_processing": f"failed {e}"
                 }
