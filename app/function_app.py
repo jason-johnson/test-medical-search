@@ -5,7 +5,6 @@ from ai.processor import PDFProcessor
 import azure.functions as func
 import logging
 from app import search
-from bson import ObjectId
 import pymongo
 from itertools import islice
 
@@ -54,12 +53,7 @@ async def save_to_db(results):
     logging.debug(f"Database connection established.")
 
     for chunk in results_chunks:
-        elems = []
-        for result in chunk:
-            result["_id"] = ObjectId()
-            elems.append(result)
-            
-        collection.insert_many(elems)
+        collection.insert_many(chunk)
         logging.info(f"Wrote {len(chunk)} results to the database")
         await asyncio.sleep(1)
 
