@@ -65,6 +65,12 @@ resource "azurerm_linux_function_app" "main" {
     "COSMOS_CONNECTION_STRING"            = azurerm_cosmosdb_account.main.primary_mongodb_connection_string
     "COSMOS_DATABASE_NAME"                = azurerm_cosmosdb_mongo_database.main.name
     "COSMOS_COLLECTION_NAME"              = azurerm_cosmosdb_mongo_collection.main.name
+    "AZURE_FORM_RECOGNIZER_ENDPOINT"      = azurerm_cognitive_account.di.endpoint
+    "AZURE_FORM_RECOGNIZER_KEY"           = azurerm_cognitive_account.di.primary_access_key
+    "OPENAI_API_KEY"                      = azurerm_cognitive_account.openai.primary_access_key
+    "OPENAI_AZURE_ENDPOINT"               = azurerm_cognitive_account.openai.endpoint
+    "OPENAI_API_VERSION"                  = azurerm_cognitive_deployment.main["gpt-4"].model[0].version
+    "OPENAI_DEPLOYMENT_NAME"              = azurerm_cognitive_deployment.main["gpt-4"].model[0].name
   }
 
   identity {
