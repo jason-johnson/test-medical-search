@@ -24,7 +24,7 @@ async def query_redo(redo):
     resp = await redo.client.search(redo.searchkey, redo.token)
     return resp
 
-def process_results(results, success=[]):
+def process_results(results):
     redo = [result for result in results if result.__class__.__name__ == 'Redo']
     successes = [result for result in results if not result.__class__.__name__ in ['Redo', 'Partial']]
     partials = [result for result in results if result.__class__.__name__ == 'Partial']
@@ -32,6 +32,8 @@ def process_results(results, success=[]):
     for partial in partials:
         successes.append(partial.successes)
         redo.append(partial.redo)
+
+    success = []
 
     for s in successes:
         data = [d.data for d in s]
@@ -69,7 +71,8 @@ async def search(search_keywords, concurrent_pm, concurrent_ss, concurrent_dm, r
         while redo and retries > 0:
             logging.info(f"Retrying {len(redo)} results.")
             results = await asyncio.gather(*(query_redo(r) for r in redo))
-            redo, success, any_succeded = process_results(results, success)
+            redo, new_success, any_succeded = process_results(results)
+            success.extend(new_success)
             if not any_succeded:
                 retries -= 1
 
