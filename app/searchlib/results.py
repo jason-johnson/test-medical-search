@@ -22,6 +22,8 @@ class Success:
             "pdf_url": pdf_url,
             "ai_processed": False
         }
+        if not self.data["pdf_url"]:
+            self.data["ai_processed"] = "unsupported (no URL)"
 
     def __str__(self):
         return json.dumps(self.data, indent=4)
