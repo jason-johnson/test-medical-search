@@ -276,6 +276,8 @@ class PDFProcessor:
                 logging.error(f"Error saving image to blob: {e}")
                 continue
 
+        return results
+
     def process_pdf(self, url, sections):
         images = []
         tables = ""
