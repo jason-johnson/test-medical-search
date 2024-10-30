@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import base64
+import uuid
 import requests
 from io import BytesIO
 from PIL import Image
@@ -10,6 +11,8 @@ from openai import AzureOpenAI
 from azure.core.credentials import AzureKeyCredential
 from azure.ai.documentintelligence import DocumentIntelligenceClient
 from azure.ai.documentintelligence.models import AnalyzeDocumentRequest, ContentFormat
+from azure.identity import DefaultAzureCredential
+from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
 
 
 class PDFProcessor:
@@ -30,6 +33,11 @@ class PDFProcessor:
         )
         self.deployment_name = os.environ.get(
             "OPENAI_DEPLOYMENT_NAME", 'GPT-4o-20240513-global')
+        
+        account_url = os.environ.get("AZURE_STORAGE_ACCOUNT_URL")
+        default_credential = DefaultAzureCredential()
+        
+        self.blob_service_client = BlobServiceClient(account_url, credential=default_credential)
 
     @staticmethod
     def download_pdf_from_url(url):
@@ -250,6 +258,23 @@ class PDFProcessor:
         except Exception as e:
             logging.error(f"Error extracting sections with OpenAI: {e}")
             return tuple(extracted_strings)
+        
+    def save_images_to_blob(self, images):
+        container_name = os.environ.get("AZURE_STORAGE_CONTAINER_NAME", "journal-images")
+        container_client = self.blob_service_client.get_container_client(container_name)
+
+        results = []
+        
+        for _, image in enumerate(images):
+            try:
+                image_bytes = base64.b64decode(image)
+                blob_name = f'{str(uuid.uuid4())}.png'
+                blob_client = container_client.get_blob_client(blob_name)
+                blob_client.upload_blob(image_bytes, overwrite=True)
+                results.append(blob_client.url)
+            except Exception as e:
+                logging.error(f"Error saving image to blob: {e}")
+                continue
 
     def process_pdf(self, url, sections):
         images = []
@@ -290,12 +315,14 @@ class PDFProcessor:
                     images = self.extract_images_from_pdf(url, poller_result)
                     tables = self.extract_tables(poller_result)
 
+                    image_urls = self.save_images_to_blob(images)
+
                     return {
                         "markdown_sections": markdown_sections,
                         "introduction": introduction,
                         "results": results,
                         "conclusion": conclusion,
-                        "images": images,
+                        "images": image_urls,
                         "tables": tables,
                         "ai_processing": "successful"
                     }

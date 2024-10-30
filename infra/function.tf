@@ -60,6 +60,9 @@ resource "azurerm_linux_function_app" "main" {
 
   }
 
+  ftp_publish_basic_authentication_enabled       = false
+  webdeploy_publish_basic_authentication_enabled = false
+
   app_settings = {
     "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
     "COSMOS_CONNECTION_STRING"            = azurerm_cosmosdb_account.main.primary_mongodb_connection_string
@@ -69,8 +72,9 @@ resource "azurerm_linux_function_app" "main" {
     "AZURE_FORM_RECOGNIZER_KEY"           = azurerm_cognitive_account.di.primary_access_key
     "OPENAI_API_KEY"                      = azurerm_cognitive_account.openai.primary_access_key
     "OPENAI_AZURE_ENDPOINT"               = azurerm_cognitive_account.openai.endpoint
-    "OPENAI_API_VERSION"                  = azurerm_cognitive_deployment.main["gpt-4"].model[0].version
+    "OPENAI_API_VERSION"                  = "2024-08-01-preview"
     "OPENAI_DEPLOYMENT_NAME"              = azurerm_cognitive_deployment.main["gpt-4"].model[0].name
+    "AZURE_STORAGE_ACCOUNT_URL"           = azurerm_storage_account.main.primary_blob_endpoint
   }
 
   identity {
@@ -81,5 +85,11 @@ resource "azurerm_linux_function_app" "main" {
 resource "azurerm_role_assignment" "fun2acr" {
   scope                = azurerm_container_registry.acr.id
   role_definition_name = "AcrPull"
+  principal_id         = azurerm_linux_function_app.main.identity[0].principal_id
+}
+
+resource "azurerm_role_assignment" "sa_admin_blob_contrib" {
+  scope                = azurerm_storage_account.main.id
+  role_definition_name = "Storage Blob Data Contributor"
   principal_id         = azurerm_linux_function_app.main.identity[0].principal_id
 }
