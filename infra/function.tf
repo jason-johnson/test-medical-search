@@ -12,6 +12,12 @@ resource "azurerm_storage_account" "main" {
   account_replication_type = "LRS"
 }
 
+resource "azurerm_storage_container" "images" {
+  name                  = "journal-images"
+  storage_account_name  = azurerm_storage_account.main.name
+  container_access_type = "private"
+}
+
 data "namep_azure_name" "sp" {
   name     = "main"
   location = "westeurope"
@@ -75,6 +81,7 @@ resource "azurerm_linux_function_app" "main" {
     "OPENAI_API_VERSION"                  = "2024-08-01-preview"
     "OPENAI_DEPLOYMENT_NAME"              = azurerm_cognitive_deployment.main["gpt-4"].model[0].name
     "AZURE_STORAGE_ACCOUNT_URL"           = azurerm_storage_account.main.primary_blob_endpoint
+    "AZURE_STORAGE_CONTAINER_NAME"        = azurerm_storage_container.images.name
   }
 
   identity {
