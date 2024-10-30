@@ -179,7 +179,7 @@ def UpdateAI(updateAI: func.TimerRequest) -> None:
                 "conclusion": processed_data["conclusion"],
                 "figures": processed_data["images"],
                 "tables": processed_data["tables"],
-                "status": {"analysis": "", "ai_processing": processed_data["ai_processing"]}
+                "ai_processing": processed_data["ai_processing"]
             }
             update = { "$set": new_values }
             result = collection.update_one({ "_id": doc["_id"] }, update)
