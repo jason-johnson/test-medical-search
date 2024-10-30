@@ -156,7 +156,7 @@ def UpdateAI(updateAI: func.TimerRequest) -> None:
         logging.info('DB AI Update timer is past due!')
 
     logging.info('DB AI Update timer is starting')
-    batch_size = os.environ.get("COSMOS_AI_BATCH_SIZE", 300)
+    batch_size = os.environ.get("COSMOS_AI_BATCH_SIZE", 10)
     batch_size = int(batch_size)
     logging.info(f'Only processing first {batch_size} documents')
 
@@ -179,7 +179,7 @@ def UpdateAI(updateAI: func.TimerRequest) -> None:
                 "conclusion": processed_data["conclusion"],
                 "figures": processed_data["images"],
                 "tables": processed_data["tables"],
-                "ai_processing": processed_data["ai_processing"]
+                "ai_processed": processed_data["ai_processing"]
             }
             update = { "$set": new_values }
             result = collection.update_one({ "_id": doc["_id"] }, update)
