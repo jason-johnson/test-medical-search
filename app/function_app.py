@@ -1,4 +1,5 @@
 import asyncio
+from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
 import os
 from ai.processor import PDFProcessor
@@ -58,6 +59,25 @@ async def save_to_db(results):
         await asyncio.sleep(1)
 
     client.close()
+
+def process_document(doc):
+    logging.info(f'Processing document: {doc["_id"]}')
+
+    processor = PDFProcessor()
+    url = doc["pdf_url"]
+    
+    processed_data = processor.process_pdf(url, ["introduction", "results", "conclusion"])
+    new_values = { 
+        "markdown_sections": processed_data["markdown_sections"],
+        "introduction": processed_data["introduction"],
+        "results": processed_data["results"],
+        "conclusion": processed_data["conclusion"],
+        "figures": processed_data["images"],
+        "tables": processed_data["tables"],
+        "ai_processed": processed_data["ai_processing"]
+    }
+
+    return doc["_id"], new_values
 
 
 @app.route(route="Search", auth_level=func.AuthLevel.ANONYMOUS)
@@ -156,37 +176,33 @@ async def UpdateAI(updateAI: func.TimerRequest) -> None:
         logging.info('DB AI Update timer is past due!')
 
     logging.info('DB AI Update timer is starting')
-    batch_size = os.environ.get("COSMOS_AI_BATCH_SIZE", 10)
+    batch_size = os.environ.get("COSMOS_AI_BATCH_SIZE", 200)
     batch_size = int(batch_size)
     logging.info(f'Only processing first {batch_size} documents')
+    concurrent_ai = os.environ.get("CONCURRENT_AI_DOCUMENTS", 20)
+    concurrent_ai = int(concurrent_ai)
+    logging.info(f'Processing {concurrent_ai} documents at a time with AI')
 
-    processor = PDFProcessor()
     client, collection = get_db_connection()
 
     try:
         cursor = collection.find({'ai_processed': False}, limit=batch_size)
         docs = cursor.to_list()
         logging.info(f'Found {len(docs)} documents to process')
-        for doc in docs:
-            logging.info(f'Processing document: {doc["_id"]}')
-            url = doc["pdf_url"]
 
-            processed_data = processor.process_pdf(url, ["introduction", "results", "conclusion"])
-            new_values = { 
-                "markdown_sections": processed_data["markdown_sections"],
-                "introduction": processed_data["introduction"],
-                "results": processed_data["results"],
-                "conclusion": processed_data["conclusion"],
-                "figures": processed_data["images"],
-                "tables": processed_data["tables"],
-                "ai_processed": processed_data["ai_processing"]
-            }
+        loop = asyncio.get_event_loop()
+        results = []
+        
+        with ProcessPoolExecutor(max_workers=concurrent_ai) as process_executor:
+            results = await asyncio.gather(*(loop.run_in_executor(process_executor, process_document, doc) for doc in docs))
+            
+        for doc_id, new_values in results:
             update = { "$set": new_values }
-            result = collection.update_one({ "_id": doc["_id"] }, update)
+            result = collection.update_one({ "_id": doc_id }, update)
             if result.modified_count == 1:
-                logging.info(f'Updated document: {doc["_id"]}')
+                logging.info(f'Updated document: {doc_id}')
             else:
-                logging.warning(f'Failed to update document for some reason: {doc["_id"]}')
+                logging.warning(f'Failed to update document for some reason: {doc_id}')
 
     except Exception as e:
         logging.error(f'An error occured: {str(e)}')
