@@ -257,7 +257,7 @@ class PDFProcessor:
 
         except Exception as e:
             logging.error(f"Error extracting sections with OpenAI: {e}")
-            return tuple(extracted_strings)
+            return tuple(extracted_strings + [""])
         
     def save_images_to_blob(self, images):
         container_name = os.environ.get("AZURE_STORAGE_CONTAINER_NAME", "journal-images")
