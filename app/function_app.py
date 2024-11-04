@@ -151,7 +151,7 @@ async def ClearDatabase(req: func.HttpRequest) -> func.HttpResponse:
 
 @app.function_name(name="updateAI")
 @app.timer_trigger(schedule="0 */15 * * * *", arg_name="updateAI", run_on_startup=True)
-def UpdateAI(updateAI: func.TimerRequest) -> None:
+async def UpdateAI(updateAI: func.TimerRequest) -> None:
     if updateAI.past_due:
         logging.info('DB AI Update timer is past due!')
 

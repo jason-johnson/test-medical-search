@@ -80,7 +80,9 @@ async def search(search_keywords, concurrent_pm, concurrent_ss, concurrent_dm, r
 
         return success
 
-async def process_ai(processor, doc):
+def process_ai(doc):
+    processor = PDFProcessor()
+
     url = doc["pdf_url"]
     processed_data = processor.process_pdf(url, ["introduction", "results", "conclusion"])
     new_values = { 
@@ -121,11 +123,6 @@ async def main():
 
     results = await search(search_keywords, args.concurrent_pm, args.concurrent_ss, args.concurrent_dm, args.retries)
 
-    processor = None
-
-    if args.process_ai:
-        processor = PDFProcessor()
-
     if args.output_file:
         async with aiofiles.open(args.output_file, mode='w') as f:
             for s in results:
@@ -137,7 +134,7 @@ async def main():
             if args.with_pdf_only and not s['pdf_url']:
                 continue
             if args.process_ai:
-                s = await process_ai(processor, s)
+                s = await asyncio.get_event_loop().run_in_executor(None, process_ai, s)
             print(json.dumps(s))
 
 if __name__ == '__main__':
