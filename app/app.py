@@ -1,4 +1,5 @@
 import argparse
+from concurrent.futures import ProcessPoolExecutor
 from functools import reduce
 import json
 import sys
@@ -106,6 +107,7 @@ async def main():
     parser.add_argument('--concurrent-ss', type=int, help="The number of concurrent Semantic Scholar requests to make", default=50)
     parser.add_argument('--concurrent-dm', type=int, help="The number of concurrent Dynamed requests to make", default=10)
     parser.add_argument('--process-ai', action='store_true', help="Process the AI on the results", default=True)
+    parser.add_argument('--ai-concurrency', type=int, help="How many AI threads to run at once", default=10) 
     parser.add_argument('-r', '--retries', type=int, default=3, help='Number of retries to make')
     parser.add_argument('-v', '--verbose', action='count', help='Enable verbose mode', default=0)
     
@@ -130,11 +132,14 @@ async def main():
                     continue
                 await f.write(json.dumps(s) + '\n')
     else:
+        loop = asyncio.get_event_loop()
+        
+        with ProcessPoolExecutor(max_workers=args.ai_concurrency) as process_executor:
+            results = await asyncio.gather(*(loop.run_in_executor(process_executor, process_ai, s) for s in results if s['pdf_url']))
+            
         for s in results:
             if args.with_pdf_only and not s['pdf_url']:
                 continue
-            if args.process_ai:
-                s = await asyncio.get_event_loop().run_in_executor(None, process_ai, s)
             print(json.dumps(s))
 
 if __name__ == '__main__':
