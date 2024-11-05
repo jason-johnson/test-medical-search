@@ -1,7 +1,7 @@
 import asyncio
-from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
 import os
+import uuid
 from ai.processor import PDFProcessor
 import azure.functions as func
 import logging
@@ -9,6 +9,7 @@ from app import search
 import pymongo
 from itertools import islice
 
+logging.basicConfig(format="[%(name)s: %(levelname)s - %(funcName)20s()] %(message)s")
 app = func.FunctionApp()
 
 
@@ -60,10 +61,7 @@ async def save_to_db(results):
 
     client.close()
 
-def process_document(doc):
-    logging.info(f'Processing document: {doc["_id"]}')
-
-    processor = PDFProcessor()
+def process_document(processor, doc):
     url = doc["pdf_url"]
     
     processed_data = processor.process_pdf(url, ["introduction", "results", "conclusion"])
@@ -170,41 +168,51 @@ async def ClearDatabase(req: func.HttpRequest) -> func.HttpResponse:
 
 
 @app.function_name(name="updateAI")
-@app.timer_trigger(schedule="0 */15 * * * *", arg_name="updateAI", run_on_startup=True)
+@app.timer_trigger(schedule="0 */3 * * * *", arg_name="updateAI", run_on_startup=True)
 async def UpdateAI(updateAI: func.TimerRequest) -> None:
+    id = uuid.uuid4()
+    logger = logging.getLogger(f'{id}')
+
     if updateAI.past_due:
-        logging.info('DB AI Update timer is past due!')
+        logger.info('DB AI Update timer is past due!')
 
-    logging.info('DB AI Update timer is starting')
-    batch_size = os.environ.get("COSMOS_AI_BATCH_SIZE", 200)
+    logger.info('DB AI Update timer is starting')
+    batch_size = os.environ.get("COSMOS_AI_BATCH_SIZE", 5)
     batch_size = int(batch_size)
-    logging.info(f'Only processing first {batch_size} documents')
-    concurrent_ai = os.environ.get("CONCURRENT_AI_DOCUMENTS", 20)
-    concurrent_ai = int(concurrent_ai)
-    logging.info(f'Processing {concurrent_ai} documents at a time with AI')
+    logger.info(f'Only processing first {batch_size} documents')
 
+    processor = PDFProcessor()
     client, collection = get_db_connection()
 
     try:
         cursor = collection.find({'ai_processed': False}, limit=batch_size)
         docs = cursor.to_list()
-        logging.info(f'Found {len(docs)} documents to process')
 
-        loop = asyncio.get_event_loop()
-        results = []
+        if len(docs) == 0:
+            logger.info(f'No documents to process')
+            return
         
-        with ProcessPoolExecutor(max_workers=concurrent_ai) as process_executor:
-            results = await asyncio.gather(*(loop.run_in_executor(process_executor, process_document, doc) for doc in docs))
-            
-        for doc_id, new_values in results:
-            update = { "$set": new_values }
-            result = collection.update_one({ "_id": doc_id }, update)
+        logger.info(f'Found {len(docs)} documents to process')
+
+        logger.info('Locking documents for processing')
+        for doc in docs:
+            result = collection.update_one({ "_id": doc["_id"] }, { "$set": { "ai_processed": f'processing ({id})' } })
             if result.modified_count == 1:
-                logging.info(f'Updated document: {doc_id}')
+                logger.info(f'Locked document: {doc_id}')
             else:
-                logging.warning(f'Failed to update document for some reason: {doc_id}')
+                logger.warning(f'Failed to lock document for some reason: {doc_id}') 
+        logger.info('Document locking complete')
+        
+        for doc in docs:
+            doc_id, new_values = process_document(processor, doc, logger)
+
+            result = collection.update_one({ "_id": doc_id }, { "$set": new_values })
+            if result.modified_count == 1:
+                logger.info(f'Updated document: {doc_id}')
+            else:
+                logger.warning(f'Failed to update document for some reason: {doc_id}')            
 
     except Exception as e:
-        logging.error(f'An error occured: {str(e)}')
+        logger.error(f'An error occured: {str(e)}')
     finally:
         client.close()
