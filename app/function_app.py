@@ -9,7 +9,7 @@ from app import search
 import pymongo
 from itertools import islice
 
-logging.basicConfig(format="[%(name)s: %(levelname)s - %(funcName)20s()] %(message)s")
+#logging.basicConfig(format="[%(name)s: %(levelname)s - %(funcName)20s()] %(message)s")
 app = func.FunctionApp()
 
 
@@ -171,6 +171,7 @@ async def ClearDatabase(req: func.HttpRequest) -> func.HttpResponse:
 @app.timer_trigger(schedule="0 */3 * * * *", arg_name="updateAI", run_on_startup=True)
 async def UpdateAI(updateAI: func.TimerRequest) -> None:
     id = uuid.uuid4()
+    logging.basicConfig(format="[%(name)s: %(levelname)s - %(funcName)20s()] %(message)s")
     logger = logging.getLogger(f'{id}')
 
     if updateAI.past_due:
@@ -196,7 +197,8 @@ async def UpdateAI(updateAI: func.TimerRequest) -> None:
 
         logger.info('Locking documents for processing')
         for doc in docs:
-            result = collection.update_one({ "_id": doc["_id"] }, { "$set": { "ai_processed": f'processing ({id})' } })
+            doc_id = doc["_id"]
+            result = collection.update_one({ "_id": doc_id }, { "$set": { "ai_processed": f'processing ({id})' } })
             if result.modified_count == 1:
                 logger.info(f'Locked document: {doc_id}')
             else:
