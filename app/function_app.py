@@ -9,7 +9,6 @@ from app import search
 import pymongo
 from itertools import islice
 
-#logging.basicConfig(format="[%(name)s: %(levelname)s - %(funcName)20s()] %(message)s")
 app = func.FunctionApp()
 
 
@@ -206,7 +205,7 @@ async def UpdateAI(updateAI: func.TimerRequest) -> None:
         logger.info('Document locking complete')
         
         for doc in docs:
-            doc_id, new_values = process_document(processor, doc, logger)
+            doc_id, new_values = process_document(processor, doc)
 
             result = collection.update_one({ "_id": doc_id }, { "$set": new_values })
             if result.modified_count == 1:
