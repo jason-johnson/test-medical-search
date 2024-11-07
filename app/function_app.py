@@ -253,7 +253,7 @@ async def UpdateAI4(updateAI: func.TimerRequest) -> None:
     update_document(id)
 
 @app.function_name(name="updateAI5")
-@app.timer_trigger(schedule="15 * * * * *", arg_name="updateAI5", run_on_startup=False)
+@app.timer_trigger(schedule="20 * * * * *", arg_name="updateAI5", run_on_startup=False)
 async def UpdateAI5(updateAI: func.TimerRequest) -> None:
     id = uuid.uuid4()
 
