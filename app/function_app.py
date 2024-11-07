@@ -76,6 +76,52 @@ def process_document(processor, doc):
 
     return doc["_id"], new_values
 
+def update_document(id):
+    logging.basicConfig(format="[%(name)s: %(levelname)s - %(funcName)20s()] %(message)s")
+    logger = logging.getLogger(f'{id}')
+
+    logger.info('DB AI Update timer is starting')
+    batch_size = os.environ.get("COSMOS_AI_BATCH_SIZE", 15)
+    batch_size = int(batch_size)
+    logger.info(f'Only processing first {batch_size} documents')
+
+    processor = PDFProcessor()
+    client, collection = get_db_connection()
+
+    try:
+        cursor = collection.find({'ai_processed': False}, limit=batch_size)
+        docs = cursor.to_list()
+
+        if len(docs) == 0:
+            logger.info(f'No documents to process')
+            return
+        
+        logger.info(f'Found {len(docs)} documents to process')
+
+        logger.info('Locking documents for processing')
+        for doc in docs:
+            doc_id = doc["_id"]
+            result = collection.update_one({ "_id": doc_id }, { "$set": { "ai_processed": f'processing ({id})' } })
+            if result.modified_count == 1:
+                logger.info(f'Locked document: {doc_id}')
+            else:
+                logger.warning(f'Failed to lock document for some reason: {doc_id}') 
+        logger.info('Document locking complete')
+        
+        for doc in docs:
+            doc_id, new_values = process_document(processor, doc)
+
+            result = collection.update_one({ "_id": doc_id }, { "$set": new_values })
+            if result.modified_count == 1:
+                logger.info(f'Updated document: {doc_id}')
+            else:
+                logger.warning(f'Failed to update document for some reason: {doc_id}')            
+
+    except Exception as e:
+        logger.error(f'An error occured: {str(e)}')
+    finally:
+        client.close()
+
 
 @app.route(route="Search", auth_level=func.AuthLevel.ANONYMOUS)
 async def Search(req: func.HttpRequest) -> func.HttpResponse:
@@ -167,53 +213,51 @@ async def ClearDatabase(req: func.HttpRequest) -> func.HttpResponse:
 
 
 @app.function_name(name="updateAI")
-@app.timer_trigger(schedule="0 */3 * * * *", arg_name="updateAI", run_on_startup=True)
+@app.timer_trigger(schedule="0 * * * * *", arg_name="updateAI", run_on_startup=False)
 async def UpdateAI(updateAI: func.TimerRequest) -> None:
     id = uuid.uuid4()
-    logging.basicConfig(format="[%(name)s: %(levelname)s - %(funcName)20s()] %(message)s")
-    logger = logging.getLogger(f'{id}')
 
     if updateAI.past_due:
-        logger.info('DB AI Update timer is past due!')
+        logging.info(f'DB AI Update timer is past due! ({id})')
 
-    logger.info('DB AI Update timer is starting')
-    batch_size = os.environ.get("COSMOS_AI_BATCH_SIZE", 5)
-    batch_size = int(batch_size)
-    logger.info(f'Only processing first {batch_size} documents')
+    update_document(id)
 
-    processor = PDFProcessor()
-    client, collection = get_db_connection()
+@app.function_name(name="updateAI2")
+@app.timer_trigger(schedule="5 * * * * *", arg_name="updateAI2", run_on_startup=False)
+async def UpdateAI2(updateAI: func.TimerRequest) -> None:
+    id = uuid.uuid4()
 
-    try:
-        cursor = collection.find({'ai_processed': False}, limit=batch_size)
-        docs = cursor.to_list()
+    if updateAI.past_due:
+        logging.info(f'DB AI Update timer is past due! ({id})')
 
-        if len(docs) == 0:
-            logger.info(f'No documents to process')
-            return
-        
-        logger.info(f'Found {len(docs)} documents to process')
+    update_document(id)
 
-        logger.info('Locking documents for processing')
-        for doc in docs:
-            doc_id = doc["_id"]
-            result = collection.update_one({ "_id": doc_id }, { "$set": { "ai_processed": f'processing ({id})' } })
-            if result.modified_count == 1:
-                logger.info(f'Locked document: {doc_id}')
-            else:
-                logger.warning(f'Failed to lock document for some reason: {doc_id}') 
-        logger.info('Document locking complete')
-        
-        for doc in docs:
-            doc_id, new_values = process_document(processor, doc)
+@app.function_name(name="updateAI3")
+@app.timer_trigger(schedule="10 * * * * *", arg_name="updateAI3", run_on_startup=False)
+async def UpdateAI3(updateAI: func.TimerRequest) -> None:
+    id = uuid.uuid4()
 
-            result = collection.update_one({ "_id": doc_id }, { "$set": new_values })
-            if result.modified_count == 1:
-                logger.info(f'Updated document: {doc_id}')
-            else:
-                logger.warning(f'Failed to update document for some reason: {doc_id}')            
+    if updateAI.past_due:
+        logging.info(f'DB AI Update timer is past due! ({id})')
 
-    except Exception as e:
-        logger.error(f'An error occured: {str(e)}')
-    finally:
-        client.close()
+    update_document(id)
+
+@app.function_name(name="updateAI4")
+@app.timer_trigger(schedule="15 * * * * *", arg_name="updateAI4", run_on_startup=False)
+async def UpdateAI4(updateAI: func.TimerRequest) -> None:
+    id = uuid.uuid4()
+
+    if updateAI.past_due:
+        logging.info(f'DB AI Update timer is past due! ({id})')
+
+    update_document(id)
+
+@app.function_name(name="updateAI5")
+@app.timer_trigger(schedule="15 * * * * *", arg_name="updateAI5", run_on_startup=False)
+async def UpdateAI5(updateAI: func.TimerRequest) -> None:
+    id = uuid.uuid4()
+
+    if updateAI.past_due:
+        logging.info(f'DB AI Update timer is past due! ({id})')
+
+    update_document(id)
