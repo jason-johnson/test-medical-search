@@ -172,7 +172,7 @@ async def ClearDatabase(req: func.HttpRequest) -> func.HttpResponse:
 
 
 @app.function_name(name="updateAI")
-@app.timer_trigger(schedule="0 */15 * * * *", arg_name="updateAI", run_on_startup=False)
+@app.timer_trigger(schedule="0 * * * * *", arg_name="updateAI", run_on_startup=False)
 async def UpdateAI(updateAI: func.TimerRequest) -> None:
     id = uuid.uuid4()
 
