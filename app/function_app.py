@@ -3,6 +3,7 @@ from datetime import datetime
 import os
 import uuid
 from ai.processor import PDFProcessor
+import aiohttp
 import azure.functions as func
 import logging
 from app import search
@@ -61,10 +62,11 @@ async def save_to_db(results):
     client.close()
 
 
-def process_document(processor, doc):
+async def process_document(session, processor, doc):
     url = doc["pdf_url"]
 
-    processed_data = processor.process_pdf(
+    processed_data = await processor.process_pdf(
+        session,
         url, ["introduction", "results", "conclusion"])
     new_values = {
         "markdown_sections": processed_data["markdown_sections"],
@@ -211,9 +213,13 @@ async def UpdateAI(updateAI: func.TimerRequest) -> None:
                     f'Failed to lock document for some reason: {doc_id}')
         logger.info('Document locking complete')
 
-        for doc in docs:
-            doc_id, new_values = process_document(processor, doc)
+        results = []
 
+        timeout = aiohttp.ClientTimeout(total=None, sock_connect=10, sock_read=600)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            results = await asyncio.gather(*(process_document(session, processor, doc) for doc in docs))
+
+        for doc_id, new_values in results:
             result = collection.update_one(
                 {"_id": doc_id}, {"$set": new_values})
             if result.modified_count == 1:

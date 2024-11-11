@@ -7,12 +7,12 @@ import requests
 from io import BytesIO
 from PIL import Image
 import pymupdf
-from openai import AzureOpenAI
+from openai import AsyncAzureOpenAI
 from azure.core.credentials import AzureKeyCredential
-from azure.ai.documentintelligence import DocumentIntelligenceClient
+from azure.ai.documentintelligence.aio import DocumentIntelligenceClient
 from azure.ai.documentintelligence.models import AnalyzeDocumentRequest, ContentFormat
 from azure.identity import DefaultAzureCredential
-from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
+from azure.storage.blob.aio import BlobServiceClient
 
 
 class PDFProcessor:
@@ -25,7 +25,7 @@ class PDFProcessor:
         )
 
         # Azure OpenAI
-        self.aoai_client = AzureOpenAI(
+        self.aoai_client = AsyncAzureOpenAI(
             api_key=os.environ.get("OPENAI_API_KEY"),
             api_version=os.environ.get(
                 "OPENAI_API_VERSION", "2024-02-15-preview"),
@@ -40,14 +40,13 @@ class PDFProcessor:
         self.blob_service_client = BlobServiceClient(account_url, credential=default_credential)
 
     @staticmethod
-    def download_pdf_from_url(url):
+    async def download_pdf_from_url(session, url):
         """
         Downloads the PDF from the provided URL and returns the content as a BytesIO object.
         """
         try:
-            response = requests.get(url)
-            response.raise_for_status()
-            return BytesIO(response.content)
+            async with session.get(url, raise_for_status=True) as resp:
+                return BytesIO(resp.content)
         except requests.RequestException as e:
             logging.error(f"Error downloading PDF from {url}: {e}")
             return None
@@ -80,8 +79,8 @@ class PDFProcessor:
             logging.error(f"Error cropping image from PDF: {e}")
             return None
 
-    def extract_images_from_pdf(self, pdf_url, result):
-        pdf_bytes = self.download_pdf_from_url(pdf_url)
+    async def extract_images_from_pdf(self, session, pdf_url, result):
+        pdf_bytes = await self.download_pdf_from_url(session, pdf_url)
         if not pdf_bytes:
             return []
 
@@ -117,15 +116,15 @@ class PDFProcessor:
 
         return base64_images
 
-    def extract_text_from_pdf(self, pdf_url):
+    async def extract_text_from_pdf(self, pdf_url):
         try:
-            poller = self.di_client.begin_analyze_document(
+            poller = await self.di_client.begin_analyze_document(
                 "prebuilt-layout",
                 AnalyzeDocumentRequest(url_source=pdf_url),
                 output_content_format=ContentFormat.MARKDOWN
             )
 
-            result = poller.result()
+            result = await poller.result()
 
             extracted_text = ""
             for page in result.pages:
@@ -137,7 +136,7 @@ class PDFProcessor:
             logging.error(f"Error extracting text from PDF {pdf_url}: {e}")
             return "", None
 
-    def extract_tables(self, result):
+    async def extract_tables(self, result):
         tables_markdown = ""
 
         if result is None:
@@ -202,7 +201,7 @@ class PDFProcessor:
         """
 
         try:
-            response = self.aoai_client.chat.completions.create(
+            response = await self.aoai_client.chat.completions.create(
                 model=self.deployment_name,
                 messages=[
                     {"role": "system", "content": "You are an AI assistant."},
@@ -217,7 +216,7 @@ class PDFProcessor:
             logging.error(f"Error processing tables with OpenAI: {e}")
             return ""
 
-    def extract_sections(self, text, sections):
+    async def extract_sections(self, text, sections):
 
         extracted_strings = ["", "", ""]  # List to hold the three sections
 
@@ -231,7 +230,7 @@ class PDFProcessor:
         """
 
         try:
-            response = self.aoai_client.chat.completions.create(
+            response = await self.aoai_client.chat.completions.create(
                 model=self.deployment_name,
                 messages=[
                     {"role": "system", "content": system_message},
@@ -259,9 +258,9 @@ class PDFProcessor:
             logging.error(f"Error extracting sections with OpenAI: {e}")
             return tuple(extracted_strings + [""])
         
-    def save_images_to_blob(self, images):
+    async def save_images_to_blob(self, images):
         container_name = os.environ.get("AZURE_STORAGE_CONTAINER_NAME", "journal-images")
-        container_client = self.blob_service_client.get_container_client(container_name)
+        container_client = await self.blob_service_client.get_container_client(container_name)
 
         results = []
         
@@ -269,8 +268,8 @@ class PDFProcessor:
             try:
                 image_bytes = base64.b64decode(image)
                 blob_name = f'{str(uuid.uuid4())}.png'
-                blob_client = container_client.get_blob_client(blob_name)
-                blob_client.upload_blob(image_bytes, overwrite=True)
+                blob_client = await container_client.get_blob_client(blob_name)
+                await blob_client.upload_blob(image_bytes, overwrite=True)
                 results.append(blob_client.url)
             except Exception as e:
                 logging.error(f"Error saving image to blob: {e}")
@@ -278,7 +277,7 @@ class PDFProcessor:
 
         return results
 
-    def process_pdf(self, url, sections):
+    async def process_pdf(self, session, url, sections):
         images = []
         tables = ""
 
@@ -294,8 +293,10 @@ class PDFProcessor:
             }
         else:
             try:
-                response = requests.head(url, allow_redirects=True)
-                content_type = response.headers.get('Content-Type')
+                content_type = None
+
+                async with session.head(url, allow_redirects=True) as resp:
+                    content_type = resp.headers.get('Content-Type')
 
                 if content_type is None or "pdf" not in content_type:
                     logging.warning(f"\nThe URL is not a PDF file: {url}")
@@ -310,14 +311,14 @@ class PDFProcessor:
                     }
 
                 logging.info(f"\nProcessing URL: {url}")
-                text, poller_result = self.extract_text_from_pdf(url)
+                text, poller_result = await self.extract_text_from_pdf(url)
                 if text and poller_result:
-                    introduction, results, conclusion, markdown_sections = self.extract_sections(
+                    introduction, results, conclusion, markdown_sections = await self.extract_sections(
                         text, sections)
-                    images = self.extract_images_from_pdf(url, poller_result)
-                    tables = self.extract_tables(poller_result)
+                    images = await self.extract_images_from_pdf(session, url, poller_result)
+                    tables = await self.extract_tables(poller_result)
 
-                    image_urls = self.save_images_to_blob(images)
+                    image_urls = await self.save_images_to_blob(images)
 
                     return {
                         "markdown_sections": markdown_sections,
