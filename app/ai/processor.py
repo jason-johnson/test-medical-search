@@ -3,6 +3,8 @@ import os
 import re
 import base64
 import uuid
+import aiohttp
+import aiohttp.client_exceptions
 import requests
 from io import BytesIO
 from PIL import Image
@@ -46,7 +48,8 @@ class PDFProcessor:
         """
         try:
             async with session.get(url, raise_for_status=True) as resp:
-                return BytesIO(resp.content)
+                content = await resp.read()
+                return BytesIO(content)
         except requests.RequestException as e:
             logging.error(f"Error downloading PDF from {url}: {e}")
             return None
@@ -260,7 +263,7 @@ class PDFProcessor:
         
     async def save_images_to_blob(self, images):
         container_name = os.environ.get("AZURE_STORAGE_CONTAINER_NAME", "journal-images")
-        container_client = await self.blob_service_client.get_container_client(container_name)
+        container_client = self.blob_service_client.get_container_client(container_name)
 
         results = []
         
@@ -268,7 +271,7 @@ class PDFProcessor:
             try:
                 image_bytes = base64.b64decode(image)
                 blob_name = f'{str(uuid.uuid4())}.png'
-                blob_client = await container_client.get_blob_client(blob_name)
+                blob_client = container_client.get_blob_client(blob_name)
                 await blob_client.upload_blob(image_bytes, overwrite=True)
                 results.append(blob_client.url)
             except Exception as e:
@@ -341,7 +344,7 @@ class PDFProcessor:
                         "ai_processing": "failed (no text extracted)"
                     }
 
-            except requests.RequestException as e:
+            except Exception as e:
                 logging.error(f"\nError checking the URL {url}: {e}")
                 return {
                     "markdown_sections": "",

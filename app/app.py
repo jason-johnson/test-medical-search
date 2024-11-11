@@ -81,11 +81,9 @@ async def search(search_keywords, concurrent_pm, concurrent_ss, concurrent_dm, r
 
         return success
 
-def process_ai(doc):
-    processor = PDFProcessor()
-
+async def process_ai(session, processor, doc):
     url = doc["pdf_url"]
-    processed_data = processor.process_pdf(url, ["introduction", "results", "conclusion"])
+    processed_data = await processor.process_pdf(session, url, ["introduction", "results", "conclusion"])
     new_values = { 
         "markdown_sections": processed_data["markdown_sections"],
         "introduction": processed_data["introduction"],
@@ -132,15 +130,16 @@ async def main():
                     continue
                 await f.write(json.dumps(s) + '\n')
     else:
-        loop = asyncio.get_event_loop()
-        
-        with ProcessPoolExecutor(max_workers=args.ai_concurrency) as process_executor:
-            results = await asyncio.gather(*(loop.run_in_executor(process_executor, process_ai, s) for s in results if s['pdf_url']))
-            
-        for s in results:
-            if args.with_pdf_only and not s['pdf_url']:
-                continue
-            print(json.dumps(s))
+        processor = PDFProcessor()
+        timeout = aiohttp.ClientTimeout(total=None, sock_connect=10, sock_read=600)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+
+            results = await asyncio.gather(*[process_ai(session, processor, s) for s in results if s['pdf_url']])
+                
+            for s in results:
+                if args.with_pdf_only and not s['pdf_url']:
+                    continue
+                print(json.dumps(s))
 
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr, level=logging.WARN)
