@@ -5,12 +5,35 @@ import uuid
 from ai.processor import PDFProcessor
 import aiohttp
 import azure.functions as func
+import azure.durable_functions as df
 import logging
 from app import search
 import pymongo
 from itertools import islice
 
-app = func.FunctionApp()
+myApp = df.DFApp(http_auth_level=func.AuthLevel.ANONYMOUS)
+
+
+@myApp.route(route="orchestrators/hello")
+@myApp.durable_client_input(client_name="client")
+async def http_start(req: func.HttpRequest, client):
+    instance_id = await client.start_new('hello_orchestrator')
+    response = client.create_check_status_response(req, instance_id)
+    return response
+
+
+@myApp.orchestration_trigger(context_name="context")
+def hello_orchestrator(context):
+    result1 = yield context.call_activity("hello", "Seattle")
+    result2 = yield context.call_activity("hello", "Tokyo")
+    result3 = yield context.call_activity("hello", "London")
+
+    return [result1, result2, result3]
+
+
+@myApp.activity_trigger(input_name="city")
+def hello(city: str):
+    return f"Hello {city}"
 
 
 def get_db_connection():
@@ -81,7 +104,6 @@ async def process_document(session, processor, doc):
     return doc["_id"], new_values
 
 
-@app.route(route="Search", auth_level=func.AuthLevel.ANONYMOUS)
 async def Search(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
     concurrent_pm = os.environ.get("CONCURRENT_PUBMED", 10)
@@ -121,12 +143,10 @@ async def Search(req: func.HttpRequest) -> func.HttpResponse:
         )
 
 
-@app.route(route="Health", auth_level=func.AuthLevel.ANONYMOUS)
 async def Health(req: func.HttpRequest) -> func.HttpResponse:
     return func.HttpResponse("OK", status_code=200)
 
 
-@app.route(route="Delete", auth_level=func.AuthLevel.ANONYMOUS)
 async def Delete(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Delete request recieved.')
 
@@ -155,7 +175,6 @@ async def Delete(req: func.HttpRequest) -> func.HttpResponse:
         )
 
 
-@app.route(route="ClearDatabase", auth_level=func.AuthLevel.ANONYMOUS)
 async def ClearDatabase(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Clear Database request recieved.')
 
@@ -171,8 +190,6 @@ async def ClearDatabase(req: func.HttpRequest) -> func.HttpResponse:
     return func.HttpResponse("Deleted all documents", status_code=200)
 
 
-@app.function_name(name="updateAI")
-@app.timer_trigger(schedule="0 * * * * *", arg_name="updateAI", run_on_startup=False)
 async def UpdateAI(updateAI: func.TimerRequest) -> None:
     id = uuid.uuid4()
 
@@ -215,7 +232,8 @@ async def UpdateAI(updateAI: func.TimerRequest) -> None:
 
         results = []
 
-        timeout = aiohttp.ClientTimeout(total=None, sock_connect=10, sock_read=600)
+        timeout = aiohttp.ClientTimeout(
+            total=None, sock_connect=10, sock_read=600)
         async with aiohttp.ClientSession(timeout=timeout) as session:
             results = await asyncio.gather(*(process_document(session, processor, doc) for doc in docs))
 
