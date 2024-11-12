@@ -17,23 +17,58 @@ myApp = df.DFApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 @myApp.route(route="orchestrators/hello")
 @myApp.durable_client_input(client_name="client")
 async def http_start(req: func.HttpRequest, client):
-    instance_id = await client.start_new('hello_orchestrator')
-    response = client.create_check_status_response(req, instance_id)
-    return response
+    request_id = f'SEARCH ({datetime.now().isoformat()})'
+    
+    keywords = req.params.get('keywords')
+    if not keywords:
+        try:
+            req_body = req.get_json()
+        except ValueError:
+            pass
+        else:
+            keywords = req_body.get('keywords')
+
+    if keywords:
+        try:
+            keywords = keywords.split(',')
+            request_id = f'{request_id} - {keywords}'
+            logging.info(f'{request_id} - Starting')
+
+            parameters = {
+                "keywords": keywords,
+            }
+
+            instance_id = await client.start_new('main_orchestrator', None, parameters)
+            response = client.create_check_status_response(req, instance_id)
+            return response
+        except Exception as e:
+            logging.error(f'An error occured: {str(e)}')
+            return func.HttpResponse(f"An error occured: {str(e)}", status_code=500)
+        finally:
+            logging.info(f'{request_id} - Completed')
+    else:
+        return func.HttpResponse(
+            "This HTTP triggered function executed successfully, but recieved no keywords",
+            status_code=400
+        )
 
 
 @myApp.orchestration_trigger(context_name="context")
-def hello_orchestrator(context):
-    result1 = yield context.call_activity("hello", "Seattle")
-    result2 = yield context.call_activity("hello", "Tokyo")
-    result3 = yield context.call_activity("hello", "London")
+def main_orchestrator(context):
+    input = context.get_input()
 
-    return [result1, result2, result3]
+    tasks = []
+    for keyword in input["keywords"]:
+        tasks.append(context.call_activity("search", keyword))
+    
+    results = yield context.task_all(tasks)
+
+    return results
 
 
-@myApp.activity_trigger(input_name="city")
-def hello(city: str):
-    return f"Hello {city}"
+@myApp.activity_trigger(input_name="keyword")
+def search(keyword: str):
+    return f"Hello {keyword}"
 
 
 def get_db_connection():
@@ -104,7 +139,7 @@ async def process_document(session, processor, doc):
     return doc["_id"], new_values
 
 
-async def Search(req: func.HttpRequest) -> func.HttpResponse:
+async def SearchOld(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
     concurrent_pm = os.environ.get("CONCURRENT_PUBMED", 10)
     concurrent_ss = os.environ.get("CONCURRENT_SEMANTIC_SCHOLAR", 50)
