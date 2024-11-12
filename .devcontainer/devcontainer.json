@@ -24,6 +24,7 @@
 				"ms-python.black-formatter",
 				"ms-azuretools.vscode-azurefunctions",
 				"hashicorp.terraform",
+				"azurite.azurite",
 				"github.copilot"
 			]
 		}
