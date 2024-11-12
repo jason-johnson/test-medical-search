@@ -20,6 +20,7 @@ azure-core = "^1.31.0"
 azure-ai-documentintelligence = "^1.0.0b4"
 azure-storage-blob = "^12.23.1"
 azure-identity = "^1.19.0"
+azure-functions-durable = "^1.2.10"
 
 
 [build-system]

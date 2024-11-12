@@ -247,6 +247,24 @@ files = [
 dev = ["azure-functions-durable", "coverage", "flake8 (>=4.0.1,<4.1.0)", "flake8-logging-format", "mypy", "pytest", "pytest-cov", "requests (==2.*)"]
 
 [[package]]
+name = "azure-functions-durable"
+version = "1.2.10"
+description = "Durable Functions For Python"
+optional = false
+python-versions = "<4,>=3.6"
+files = [
+    {file = "azure-functions-durable-1.2.10.tar.gz", hash = "sha256:a1bddfaefff4a4913b0a839c86362d4234d4844b5cfe7328072ceb81edeefcc1"},
+    {file = "azure_functions_durable-1.2.10-py3-none-any.whl", hash = "sha256:abc33213f571c161af51e7ff23556db294e4049d1bc17b2a9594de458d9a0486"},
+]
+
+[package.dependencies]
+aiohttp = ">=3.6.2"
+azure-functions = ">=1.12.0"
+furl = ">=2.1.0"
+python-dateutil = ">=2.8.0"
+requests = "==2.*"
+
+[[package]]
 name = "azure-identity"
 version = "1.19.0"
 description = "Microsoft Azure Identity Library for Python"
@@ -651,6 +669,21 @@ files = [
 ]
 
 [[package]]
+name = "furl"
+version = "2.1.3"
+description = "URL manipulation made simple."
+optional = false
+python-versions = "*"
+files = [
+    {file = "furl-2.1.3-py2.py3-none-any.whl", hash = "sha256:9ab425062c4217f9802508e45feb4a83e54324273ac4b202f1850363309666c0"},
+    {file = "furl-2.1.3.tar.gz", hash = "sha256:5a6188fe2666c484a12159c18be97a1977a71d632ef5bb867ef15f54af39cc4e"},
+]
+
+[package.dependencies]
+orderedmultidict = ">=1.0.1"
+six = ">=1.8.0"
+
+[[package]]
 name = "h11"
 version = "0.14.0"
 description = "A pure-Python, bring-your-own-I/O implementation of HTTP/1.1"
@@ -972,6 +1005,20 @@ typing-extensions = ">=4.11,<5"
 
 [package.extras]
 datalib = ["numpy (>=1)", "pandas (>=1.2.3)", "pandas-stubs (>=1.1.0.11)"]
+
+[[package]]
+name = "orderedmultidict"
+version = "1.0.1"
+description = "Ordered Multivalue Dictionary"
+optional = false
+python-versions = "*"
+files = [
+    {file = "orderedmultidict-1.0.1-py2.py3-none-any.whl", hash = "sha256:43c839a17ee3cdd62234c47deca1a8508a3f2ca1d0678a3bf791c87cf84adbf3"},
+    {file = "orderedmultidict-1.0.1.tar.gz", hash = "sha256:04070bbb5e87291cc9bfa51df413677faf2141c73c61d2a5f7b26bea3cd882ad"},
+]
+
+[package.dependencies]
+six = ">=1.8.0"
 
 [[package]]
 name = "pillow"
@@ -1338,6 +1385,20 @@ files = [
 ]
 
 [[package]]
+name = "python-dateutil"
+version = "2.9.0.post0"
+description = "Extensions to the standard Python datetime module"
+optional = false
+python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
+files = [
+    {file = "python-dateutil-2.9.0.post0.tar.gz", hash = "sha256:37dd54208da7e1cd875388217d5e00ebd4179249f90fb72437e91a35459a0ad3"},
+    {file = "python_dateutil-2.9.0.post0-py2.py3-none-any.whl", hash = "sha256:a8b2bc7bffae282281c8140a97d3aa9c14da0b136dfe83f850eea9a5f7470427"},
+]
+
+[package.dependencies]
+six = ">=1.5"
+
+[[package]]
 name = "pywin32"
 version = "308"
 description = "Python for Window Extensions"
@@ -1574,4 +1635,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "f49aac0d572dd9516b46229b702d75d5a3850898f172327b8585c8e7d3908390"
+content-hash = "10f4e68289a5a38454bff2a7344bf35058a15425224bdefefd2d37550e6e3c78"
