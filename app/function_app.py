@@ -14,10 +14,13 @@ from itertools import islice
 myApp = df.DFApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
 
-@myApp.route(route="orchestrators/hello")
+@myApp.route(route="orchestrators/search")
 @myApp.durable_client_input(client_name="client")
-async def http_start(req: func.HttpRequest, client):
+async def http_start(req: func.HttpRequest, client: df.DurableOrchestrationClient):
     request_id = f'SEARCH ({datetime.now().isoformat()})'
+    retries = os.environ.get("SOURCE_RETRIES", 3)
+    semantic_scholar_key = os.environ.get('SS_API_KEY')
+    pub_med_key = os.environ.get('PUBMED_API_KEY')
     
     keywords = req.params.get('keywords')
     if not keywords:
@@ -32,10 +35,13 @@ async def http_start(req: func.HttpRequest, client):
         try:
             keywords = keywords.split(',')
             request_id = f'{request_id} - {keywords}'
-            logging.info(f'{request_id} - Starting')
+            logging.info(f'{request_id} - Starting, retries: {retries}')
 
             parameters = {
                 "keywords": keywords,
+                "retries": int(retries),
+                "semantic_scholar_key": semantic_scholar_key,
+                "pub_med_key": pub_med_key
             }
 
             instance_id = await client.start_new('main_orchestrator', None, parameters)
@@ -44,8 +50,6 @@ async def http_start(req: func.HttpRequest, client):
         except Exception as e:
             logging.error(f'An error occured: {str(e)}')
             return func.HttpResponse(f"An error occured: {str(e)}", status_code=500)
-        finally:
-            logging.info(f'{request_id} - Completed')
     else:
         return func.HttpResponse(
             "This HTTP triggered function executed successfully, but recieved no keywords",
@@ -54,16 +58,28 @@ async def http_start(req: func.HttpRequest, client):
 
 
 @myApp.orchestration_trigger(context_name="context")
-def main_orchestrator(context):
+def main_orchestrator(context: df.DurableOrchestrationContext):
     input = context.get_input()
 
     tasks = []
+    retry_options = df.RetryOptions(5000, input["retries"])
     for keyword in input["keywords"]:
-        tasks.append(context.call_activity("search", keyword))
-    
+        i = input.copy()
+        i["keyword"] = keyword
+        tasks.append(context.call_sub_orchestrator_with_retry("keyword_orchestrator", retry_options, i))
+
     results = yield context.task_all(tasks)
 
     return results
+
+@myApp.orchestration_trigger(context_name="context")
+def keyword_orchestrator(context: df.DurableOrchestrationContext):
+    input = context.get_input()
+
+    retry_options = df.RetryOptions(5000, input["retries"])
+    result = yield context.call_activity_with_retry("search", retry_options, input["keyword"])
+
+    return result
 
 
 @myApp.activity_trigger(input_name="keyword")
