@@ -4,9 +4,9 @@ from datetime import datetime
 
 import requests
 
-from .results import Partial, Redo, Success
+from .results import Success
 
-def search(self, api_key, searchkey, token=None):
+def search(api_key, searchkey, token=None):
     base_url = "https://api.semanticscholar.org/graph/v1/paper/search/bulk"
     current_year = datetime.now().year
 
@@ -28,12 +28,14 @@ def search(self, api_key, searchkey, token=None):
     param_str = urllib.parse.urlencode(params, safe=',"')
     response = requests.get(base_url, params=param_str, headers=headers)
     response.raise_for_status()
+    response = response.json()
     
     result = []
+    token = None
     
     for data in response.get('data', []):
         result.append(Success(
-            source=self.__class__.__name__,
+            source='semantic_scholar',
             searchkey=searchkey,
             published_year=data.get('publicationDate', ''),
             published_date=data.get('year', ''),
@@ -51,7 +53,5 @@ def search(self, api_key, searchkey, token=None):
 
     if response.get('token'):
         token = response.get('token')
-        redo = Redo(searchkey, self, token)
-        result = Partial(result, redo)
 
-    return result
+    return result, token

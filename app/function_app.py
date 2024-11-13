@@ -10,6 +10,8 @@ import logging
 import pymongo
 from itertools import islice
 
+from searchlib import semantic_scholar
+
 myApp = df.DFApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
 
@@ -40,7 +42,7 @@ async def http_start(req: func.HttpRequest, client: df.DurableOrchestrationClien
                 "keywords": keywords,
                 "retries": int(retries),
                 "semantic_scholar_key": semantic_scholar_key,
-                "pub_med_key": pub_med_key,
+                "pubmed_key": pub_med_key,
             }
 
             instance_id = await client.start_new("main_orchestrator", None, parameters)
@@ -84,9 +86,10 @@ def keyword_orchestrator(context: df.DurableOrchestrationContext):
     retry_options = df.RetryOptions(5000, input["retries"])
     search_tasks = []
     for source in ["pubmed", "semantic_scholar"]:
+        key = input[f"{source}_key"]
         search_tasks.append(
             context.call_activity_with_retry(
-                f"search_{source}", retry_options, keyword
+                f"search_{source}", retry_options, (keyword, key)
             )
         )
 
@@ -95,14 +98,18 @@ def keyword_orchestrator(context: df.DurableOrchestrationContext):
     return results
 
 
-@myApp.activity_trigger(input_name="keyword")
-def search_semantic_scholar(keyword: str):
-    return f"semantic_scholar {keyword}"
+@myApp.activity_trigger(input_name="input")
+def search_semantic_scholar(input):
+    keyword, key = input
+    results, token = semantic_scholar.search(key, keyword)
+    logging.info(f"Got {len(results)} results from semantic scholar, and token: {token}")
+    return f"semantic_scholar {keyword} - {key}"
 
 
-@myApp.activity_trigger(input_name="keyword")
-def search_pubmed(keyword: str):
-    return f"pubmed {keyword}"
+@myApp.activity_trigger(input_name="input")
+def search_pubmed(input):
+    keyword, key = input
+    return f"pubmed {keyword} - {key}"
 
 
 def get_db_connection():
